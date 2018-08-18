@@ -1,7 +1,8 @@
 # 升级功能测试
 ## 获取升级信息
-[url](https://api.dinghuo123.com/public/specialVersion?        platform=Android&systemVersion=6.0&imei=865903038578968&isBrand=0&versionCode=312&versionName=3.19.0&userId=&userName=&dbid=)
-* [数据结构](#数据结构)
+### 链接 
+[url](https://api.dinghuo123.com/public/specialVersion?    platform=Android&systemVersion=6.0&imei=865903038578968&isBrand=0&versionCode=312&versionName=3.19.0&userId=&userName=&dbid=)
+### 数据结构
 ```
   {
     "code": 200,
@@ -32,7 +33,7 @@
       }
   }
 ```
-* [字段说明](#字段说明)
+### 字段说明
 |field|type|description|
 |-----|----|-----------|
 |isAllowUpdate|boolean|是否允许更新|
