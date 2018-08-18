@@ -1,10 +1,10 @@
 # 升级功能测试
-## 获取升级信息
-### 链接 
+## 一、获取升级信息
+### 1.链接 
 ```
 [url过长]:https://api.dinghuo123.com/public/specialVersion?platform=Android&systemVersion=6.0&imei=865903038578968&isBrand=0&versionCode=312&versionName=3.19.0&userId=&userName=&dbid=
 ```
-### 数据结构
+### 2.数据结构
 ```
   {
     "code": 200,
@@ -35,7 +35,7 @@
       }
   }
 ```
-### 字段说明
+### 3.字段说明
 |字段|类型|说明|作用|备注|
 |---|---|----|----|----|
 |isAllowUpdate|boolean|是否允许更新|false:不允许升级；true：允许升级，执行下一步|
