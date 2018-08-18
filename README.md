@@ -1,6 +1,6 @@
 # 升级功能测试
 ## 获取升级信息
-* [https://api.dinghuo123.com/public/specialVersion?platform=Android&systemVersion=6.0&imei=865903038578968&isBrand=0&versionCode=312&versionName=3.19.0&userId=&userName=&dbid=](#url)
+* [url](#https://api.dinghuo123.com/public/specialVersion?platform=Android&systemVersion=6.0&imei=865903038578968&isBrand=0&versionCode=312&versionName=3.19.0&userId=&userName=&dbid=)
 * [数据结构](#数据结构)
 ```
   {
