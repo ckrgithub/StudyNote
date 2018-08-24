@@ -1,0 +1,10 @@
+/hooks
+/node_modules
+/plugins
+/res
+/www
+.npmignore
+config.xml
+package.json
+package-lock.json
+
