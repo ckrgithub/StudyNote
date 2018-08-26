@@ -60,7 +60,7 @@
 |升级信息说明|  1.bug修复\n2.升级测试|
 
 # cordova学习
-[cordova](demo/cordova/cordova-app)
+[cordova](demo/cordova)
 
 # 混淆使用
 [混淆](demo/proguard/proguard.md)
