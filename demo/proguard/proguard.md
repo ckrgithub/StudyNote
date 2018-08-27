@@ -24,6 +24,10 @@ buildTypes {
  
  -dontusemixedcaseclassnames #混淆时不会产生形形色色的类名，是否使用大小写混合
  -dontskipnonpubliclibraryclasses #不跳过jars中的非public classes
+ -dontskipnonpubliclibraryclassmembers #指定不去忽略包可见的库类的成员
+ 
+ -printmapping proguardMapping.txt
+ -optimizations !code/simplification/cast,!field/*,!class/merging/* #混淆时采用的算法
  
  -keepattributes Exceptions #解决AGPBI警告
  -keepattributes Exceptions,InnerClasses
@@ -49,11 +53,37 @@ buildTypes {
  -keep public class * extends android.support.multidex.MultiDexApplication
  -keep public class * extends android.view.View
  -keep class andrid.support.** { *; }
- #保留View的set/get方法
- -keepclassmembers public class * extends android.view.View {
-  void set*(***);
-  *** get*();
+ 
+ #support v4
+ -dontwarn android.support.v4.**
+ -keep class android.support.v4.app.** { *; }
+ -keep interface android.support.v4.app.** { *; }
+ -keep class android.support.v4.** { *; }
+ -keep public class * extends android.support.v4.view.ActionProvider {
+  public <init>(android.content.Context);
  }
+ 
+  #v7不混淆
+ -keep class android.support.v7.** { *; }
+ -keep interface android.support.v7.** { *; }
+ -dontwarn android.support.v7.**
+ #support-design
+ -dontwarn android.support.design.**
+ -keep class android.support.design.** { *; }
+ -keep interface android.support.design.** { *; }
+ -keep public class android.support.design.R$* { *; }
+ #support v7 appcompat
+ -dontwarn android.support.v7.**
+ -keep class android.support.v7.** { *; }
+ -keep class android.support.v7.internal.** { *; }
+ -keep interface android.support.v7.internal.** { *; }
+ -keep public class android.support.v7.widget.** { *; }
+ -keep public class android.support.v7.internal.widget.** { *; }
+ -keep public class android.support.v7.internal.view.menu.** { *; }
+ #support v7 cardview
+ -keep class android.support.v7.widget.RoundRectDrawable { *; }
+ 
+ #保留View的set/get方法
  -keep public class * extends android.view.View {
   *** get*();
   void set*(***);
@@ -129,33 +159,6 @@ buildTypes {
  -keepclassmemebers class * {
   public <init> (org.json.JSONObject);
  }
- #v7不混淆
- -keep class android.support.v7.** { *; }
- -keep interface android.support.v7.** { *; }
- -dontwarn android.support.v7.**
- #support-design
- -dontwarn android.support.design.**
- -keep class android.support.design.** { *; }
- -keep interface android.support.design.** { *; }
- -keep public class android.support.design.R$* { *; }
- #support v7 appcompat
- -dontwarn android.support.v7.**
- -keep class android.support.v7.** { *; }
- -keep class android.support.v7.internal.** { *; }
- -keep interface android.support.v7.internal.** { *; }
- -keep public class android.support.v7.widget.** { *; }
- -keep public class android.support.v7.internal.widget.** { *; }
- -keep public class android.support.v7.internal.view.menu.** { *; }
- #support v4
- -dontwarn android.support.v4.**
- -keep class android.support.v4.app.** { *; }
- -keep interface android.support.v4.app.** { *; }
- -keep class android.support.v4.** { *; }
- -keep public class * extends android.support.v4.view.ActionProvider {
-  public <init>(android.content.Context);
- }
- #support v7 cardview
- -keep class android.support.v7.widget.RoundRectDrawable { *; }
  
  -dontwarn andorid.net.http.**
  -keep class org.apache.http.** { *; }
