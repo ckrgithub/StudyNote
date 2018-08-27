@@ -125,7 +125,7 @@ buildTypes {
  -keepclasseswithmembers class * {
   public <init>(android.content.Context,android.util.AttributeSet);
  }
- -keepclasseswithmemebers class * {
+ -keepclasseswithmembers class * {
   public <init>(android.content.Context,android.util.AttributeSet,int);
  }
  
@@ -135,7 +135,7 @@ buildTypes {
   public static ** valueOf(java.lang.String);
  }
  #保持native方法不被混淆
- -keepclasseswithmemebernames class * {
+ -keepclasseswithmembernames class * {
   native <methods>;
  }
  #保持Parcelable不被混淆
