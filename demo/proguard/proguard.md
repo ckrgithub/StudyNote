@@ -156,7 +156,7 @@ buildTypes {
   java.lang.Object readResolve();
  }
  
- -keepclassmemebers class * {
+ -keepclassmembers class * {
   public <init> (org.json.JSONObject);
  }
  
