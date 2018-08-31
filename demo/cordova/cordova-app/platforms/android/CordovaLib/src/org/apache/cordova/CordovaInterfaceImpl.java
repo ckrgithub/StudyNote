@@ -93,7 +93,7 @@ public class CordovaInterfaceImpl implements CordovaInterface {
 
     @Override
     public Object onMessage(String id, Object data) {
-        if ("exit".equals(id)) {
+        if ("exit".equals(id)) {//todo js消息处理
             activity.finish();
         }
         return null;

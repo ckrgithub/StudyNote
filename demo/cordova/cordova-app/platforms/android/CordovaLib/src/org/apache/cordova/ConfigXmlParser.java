@@ -117,7 +117,7 @@ public class ConfigXmlParser {
             }
         }
     }
-
+    //todo 结束节点   加载feature plugin
     public void handleEndTag(XmlPullParser xml) {
         String strNode = xml.getName();
         if (strNode.equals("feature")) {
