@@ -70,3 +70,25 @@ config.xml:
         enqueueMessage(message);
     }
 ```
+## cordova.js
+### 自执行函数
+```javascript
+(function(){
+    //这里是块级作用域
+})();
+对比：
+1.function foo(){}();//报错：Unexpected token
+2.function foo(){}(1);//不会报错，但foo函数不会执行。
+//等同于在一个function后面声明一个毫无关系的表达式：
+function foo(){}
+(1);
+3.上面代码要实现的话，必须要实现赋值，如a=function(){}(),"a="这个告诉编译器这个是函数表达式，而不是函数的声明。因为函数表达式后面可以跟圆括号。
+所以下面两段代码是等价的。
+var a=function(i){
+    alert(i);
+}(5);//5
+(function(i){
+    alert(i);
+})(5);//5
+
+```
