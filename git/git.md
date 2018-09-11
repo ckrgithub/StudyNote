@@ -18,26 +18,25 @@
     $ git commit -m "add a new file" //-m:输入本次提交的说明  
 
 ### 二、时光机穿梭
-1.版本回退
-$ git log:查看历史提交记录
-$ git log --pretty=oneline //过滤信息
-$ git reset --hard HEAD^  //回退到上一个版本
-$ git reset --hard commit_id   //回退到特定版本
-$ git reflog //记录每一次命令,可查看commit_id
-2.工作区和暂存区
-工作区：ckr目录
-暂存区：git add添加的文件，实际上时把文件修改添加到暂存区;git commit提交是把暂存区的所有内容提交到
-当前分支
-$ git status  //查看状态
-$ git diff HEAD -- readme.md//查看工作区和版本库里最新版本的区别
-3.撤销修改
-$ git checkout -- readme.md
-一种是readme.md修改后没有被放到暂存区，现在撤销修改回到版本库一模一样的状态
-一种是readme.md已经添加到暂存区后，又做修改，现在撤销修改回到添加到暂存区后的状态
-总之，就是让这个文件回到最近一次git commit或git add 状态
-$ git reset HEAD readme.md //把暂存区的修改回退工作区
-4.删除文件
-$ git rm readme.md//删除文件
+    1.版本回退  
+    $ git log:查看历史提交记录  
+    $ git log --pretty=oneline //过滤信息  
+    $ git reset --hard HEAD^  //回退到上一个版本  
+    $ git reset --hard commit_id   //回退到特定版本  
+    $ git reflog //记录每一次命令,可查看commit_id  
+    2.工作区和暂存区  
+    工作区：ckr目录  
+    暂存区：git add添加的文件，实际上时把文件修改添加到暂存区;git commit提交是把暂存区的所有内容提交到当前分支  
+    $ git status  //查看状态  
+    $ git diff HEAD -- readme.md//查看工作区和版本库里最新版本的区别  
+    3.撤销修改  
+    $ git checkout -- readme.md  
+    一种是readme.md修改后没有被放到暂存区，现在撤销修改回到版本库一模一样的状态  
+    一种是readme.md已经添加到暂存区后，又做修改，现在撤销修改回到添加到暂存区后的状态  
+    总之，就是让这个文件回到最近一次git commit或git add 状态  
+    $ git reset HEAD readme.md //把暂存区的修改回退工作区  
+    4.删除文件  
+    $ git rm readme.md//删除文件  
 
 
 
