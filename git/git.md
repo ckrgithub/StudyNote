@@ -1,10 +1,10 @@
 ## git教程
 ### 一.安装
-    1. 在linux上安装git:
+    1. 在linux上安装git:  
 首先，通过 $ git 命令查看系统有没安装git;若没有安装，则通过sudo apt-get install git就可以直接完成git的安装
-    2.在Mac OS X上安装git：
-一是安装homebrew，然后通过homebrew安装git
-二是在appstore安装Xcode,选择菜单Xcode->Preferences,在弹出窗口中找到downloads选择Command Line Tools点击安装
+    2.在Mac OS X上安装git：  
+一是安装homebrew，然后通过homebrew安装git  
+二是在appstore安装Xcode,选择菜单Xcode->Preferences,在弹出窗口中找到downloads选择Command Line Tools点击安装  
     3.在windows上安装git
 从git官网上下载Git-xxx-bit.exe,点击安装。安装完成后，在Git Bash配置：
 $ git config --global user.name "your name"
