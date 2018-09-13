@@ -50,7 +50,7 @@
     
     2.解决冲突
     $ git status //查看冲突状态  
-    $ git log --graph --pretty=online --abbrev-commit //查看合并情况,git log --graph查看分支合并图 
+    $ git log --graph --pretty=oneline --abbrev-commit //查看合并情况,git log --graph查看分支合并图 
     $ git merge --no-ff -m "merge分支并提交记录"  dev //--no-ff：禁止Fast forward,
     
     3.bug分支
