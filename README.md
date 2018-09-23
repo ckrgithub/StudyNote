@@ -64,3 +64,27 @@
 
 # 混淆使用
 [混淆](demo/proguard/proguard.md)
+
+# android gradle 依赖
+## 图片
+| gradle 3.0 | gradle 2.0 |
+| ---------- | ---------- |
+| ![](img/gradle3.0.png) | ![](img/gradle2.0.png) |
+
+## 说明
+### gradle 3.0
+|      指令      |     作用     | 说明 |
+| -------------- | ------------| ---- |
+| implementation | 不会对外暴露依赖；构建时间有所改进 | 1.moduleA依赖moduleB,moduleB使用implementation依赖moduleC，则moduleA访问不了moduleC；2.moduleC实现有所改变，则只会重新编译moduleC和moduleB |
+| api            | 可以依赖传递；构建时间有所增加;等同complie | 1.moduleA依赖moduleB,moduleB使用implementation依赖moduleC，则moduleA可以访问moduleC；2.moduleC实现有所改变，则会编译所有使用moduleC的实现的模块，也就是moduleA/moduleB/moduleC都重新编译 |
+| complieOnly | 编译时需要用到module，运行时是可选的；可减少apk大小；等同provided | 无 |
+| runtimeOnly | 运行时需要用到模块；等同apk | 无 |
+| annotationProcessor | 需要依赖注解库时用到；提供构建性能 | annotationProcessor 'com.jakewharton:butterknife-compiler:8.8.1' |
+
+## 感谢
+[android官网](https://developer.android.com/studio/build/)
+
+
+
+
+
