@@ -82,7 +82,7 @@
 | annotationProcessor | 需要依赖注解库时用到；提供构建性能 | annotationProcessor 'com.jakewharton:butterknife-compiler:8.8.1' |
 
 ## 感谢
-[android官网](https://developer.android.com/studio/build/)
+[android官网](https://developer.android.google.cn/studio/build)
 
 
 
