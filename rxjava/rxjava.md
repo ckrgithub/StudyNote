@@ -177,7 +177,7 @@ onComplete或者onError
     public void onError(Thrwoble e){}
   });
 ``` 
-## 二、操作符
+## 二、创建操作符
 ### 1.just
 ```java
   Flowable.just("test","test2")
@@ -256,20 +256,195 @@ fromArray可以接受任意长度的数据数组
           .subscribe(s -> Log.i(TAG,String.valueOf(s)));
   注意，当x从1开始发送到10后(参数10是发送10个数量的意思，类似于request(10)操作)调用onComplete方法,从最后一个元素发出dao9onComplete之间并不会有period长度的延迟
 ```
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+### 10.range/rangeLong
+不需要延迟发送数据，但需要确定一个数据的范围可以采用range或者rangeLong
+```java
+  Flowable.range(0,5)//int类型范围
+          .subscribe(x -> Log.i(TAG,String.valueOf(x)));
+  Flowable.rangeLong(Integer.MAX_VALUE,5L)
+          .subscribe(x -> Log.i(TAG,String.valueOf(x)));
+  ```
+### 11.defer
+一个被观察者可以订阅多个观察者，如果需要每个观察者被订阅的时候都重新创建被观察者(一对一),则可以使用defer操作符:
+```java
+   Flowable<String> flowable = Flowable.defer(new Callable<Publisher<String>>(){
+    @Override
+    public Publisher<String> call() throws Exception{
+      return Flowable.just("1","2");
+    }
+   });
+   flowable.subscribe(str -> Log.i(TAG,str));//订阅第一个观察者
+   flowable.subscribe(str -> Log.i(TAG,str));//订阅第二个观察者
+   顺序输出1,2，只有当第一个观察者执行完后，才回去创建第二个被观察者，然后订阅观察者，然后才开始(第二个被观察者)发送事件消息
+```
+## 三、过滤操作符
+### 1.filter
+```java
+  Flowable.just(1,2,3)
+          .filter(new Predicate<Integer>(){
+            @Override
+            public boolean test(Integer integer) throws Exception{
+              return integer >=2;//过滤出>=2的数据
+            }
+          })
+          .subscribe(integer -> Log.i(TAG,String.valueOf(integer)));
+  输出2,3
+```
+### 2.take
+如果需要使用类似request(long)的方法来限制发射数据的数量，可以使用take操作符:'
+```java
+  Flowable.interval(1,TimeUnit.SECONDS)
+          .take(5)//只发射5个元素
+          .subscribe(integer -> Log.i(TAG,""+integer));
+  或者采用时间过滤
+  Flowable.interval(1,TimeUnit.SECONDS)
+          .take(5,TimeUnit.SECONDS)//5秒内的数据(这里输出0,1,2,3)
+          .subscribe(integer -> Log.i(TAG,""+integer));
+```
+### 3.takeLast
+如果要筛选出最后几个元素的话使用takeLast：
+```java
+Flowable.just(1,2,3,4,5)
+        .takeLast(3)
+        .subscribe(integer -> Log.i(TAG,""+integer));
+或者
+Flowable.intervalRange(0,10,1,1,TimeUnit.SECONDS)
+        .takeLast(3,TimeUnit.SECONDS)//最后三秒发送的数据
+        .subscribe(integer -> Log.i(TAG,""+integer));
+另外，使用takeLast筛选时间，可以增加delayError参数(不传默认为false)takeLast(3,TimeUnit.SECONDS,true)来延迟筛选过程中接收到的error
+注意，首先元素数量是可数的，由于takeLast使用的是buffer,所以过滤后的数据会一次性发送
+```
+### 4.firstElement/lastElement
+如果需要选取第一个元素(允许为空),可以使用firstElement操作符：
+```java
+  Flowable.just(1,2,3)
+          .firstElement()
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  同理，如果选取最后一个元素(允许为空),可以使用lastElement操作符：
+  Flowable.just(1,2,3)
+          .lastElement()
+          .subscribe(ele -> Log.i(TAG,""+ele));
+```
+### 5.first/last
+如果要设置一个默认值(当被观察者不发射任何元素的时候)可以使用first操作：
+```java
+  Flowable.empty()
+          .first(2)//这里2是默认元素，非第二个元素
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  同理
+  Flowable.empty()
+          .last(3)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+```
+### 6.firstOrError/lastOrError
+如果需要在空的时候抛出异常，可以使用：
+```java
+  Flowable.empty()
+          .firstOrError
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  Flowable.empty()
+          .lastOrError
+          .subscribe(ele -> Log.i(TAG,""+ele));
+```
+### 7.elelmentAt/elementAtOrError
+如果需要指定发射第几个元素(注：这里的参数为索引值),可以使用elementAt操作符：
+```java
+  Flowable.just("a","b","c")
+          .elementAt(2)//指定索引为2的元素，如果不存在则直接完成
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  如果需要设置越界后发送的默认元素，可以添加额外默认值参数：
+  Flowable.just("a","b","c")
+          .elementAt(4,"d")
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  如果希望越界后抛出异常，可以使用elementAtOrError操作符：
+  Flowable.just("a","b","c")
+          .elementAtOrError(3)//指定索引值为3的元素，如果不存在则抛出异常
+          .subscribe(ele -> Log.i(TAG,""+ele));
+```
+### 8.ofType
+如果需要筛选特定类型的数据，可以采用ofType:
+```java
+  Flowable.just("a",3,4,"b")
+          .ofType(Integer.class)
+          .subscribe(integer -> Log.i(TAG,""+ele));
+  输出1、3，其他元素被抛弃
+```
+### 9.skip/skipLast
+如果需要跳过若干个元素，或者跳过一段时间，可以使用skip/skipLast:
+```java
+  Flowable.just("a","b","c")
+          .skip(1)
+          .skipLast(1)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  Flowable.just("a","b","c")
+          .skip(1)
+          .skipLast(1)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+```
+### 10.ignoreElements
+如果你不关心发送的元素，只关心onComplete和onError事件，可以使用ignoreElement,它会把当前被观察者转成Completable类型的被观察者:
+```java
+  Flowable.just("a","b","c")
+          .ignoreElements()
+          .subscribe(() -> Log.i(TAG,"complete"));
+```
+### 11.distinct/distinctUntilChanged
+如果需要过滤重复的元素，可以使用distinct:'
+```java
+  Flowable.just("a","b","c","a","b")
+          .distinct()
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  输出a、b、c三个元素
+  如果需要过滤连续重复的元素，可以使用distinctUntilChanged:
+  Flowable.just("a","b","c","a","a","c")
+          .distinctUntilChanged()
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  输出a、b、c、a、c
+```
+### 12.timeout
+过滤超时操作：
+```java
+  Flowable.intervalRange(0,10,0,3,TimeUnit.SECONDS)
+          .timeout(1,TimeUnit.SECONDS)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  输出0后超时，抛出异常
+  Flowable.intervalRange(0,10,0,3,TimeUnit.SECONDS)
+          .timeout(1,TimeUnit.SECONDS,Flowable.just(-1L))
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  输出0,然后超时，使用自定义的Flowable输出-1.
+```
+### 13.throttleFirst
+在一段时间内只响应第一次的操作，比如一段时间内连续点击按钮只执行第一次的点击操作
+```java
+  Flowable.intervalRange(0,10,0,1,TimeUnit.SECONDS)
+          .throttleFirst(1,TimeUnit.SECONDS)//每一秒中只处理第一个元素
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  输出0、2、4、6、8
+```
+### 14.throttleLast/sample
+隔一段时间采集一个元素：
+```java
+  Flowable.intervalRange(0,10,0,1,TimeUnit.SECONDS)
+          .throttleLast(2,TimeUnit.SECONDS)//每2秒中采集最后一个元素
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  等同于
+  Flowable.intervalRange(0,10,0,1,TimeUnit.SECONDS)
+          .sample(2,TimeUnit.SECONDS)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  输出1、3、5、7,之后直接触发onComplete事件
+``` 
+### 15.throttleWithTimeout/debounce
+假设有一种即时显示搜索结果需求时，要求一段时间用户不输入才响应请求搜索结果
+```java
+  Flowable.intervalRange(0,10,0,1,TimeUnit.SECONDS)
+          .throttleWithTimeout(2,TimeUnit.SECONDS)//2秒内有新数据则抛弃旧数据
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  等同于
+  Flowable.intervalRange(0,10,0,1,TimeUnit.SECONDS)
+          .debounce(2,TimeUnit.SECONDS)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  只会输出9，因为每当接收到一个元素的时候，会等待2秒，如果有新元素发送，则抛弃旧元素，使用新的元素，直到2秒过去或者没有新的数据
+```
 
 
 
