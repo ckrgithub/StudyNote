@@ -1,9 +1,8 @@
 # RxJava 2.x
-## 概念
-```java
+## 一、概念
 Rx是ReactiveX的缩写，而ReactiveX是Reactive Extensions的缩写。Rxjava顾名思义即是Java上的异步和基于事件响应式编程库。
-RxJava基于观察者模式，主要有四个部分：观察者、被观察者、订阅、事件.
-例子：
+RxJava基于观察者模式，主要有四个部分：观察者、被观察者、订阅、事件。
+```java
   FlowableSubscriber<String> subscriber = new FlowableSubscriber<String>(){
     @Override
     public void onSubscribe(Subscription s){
@@ -34,11 +33,10 @@ RxJava基于观察者模式，主要有四个部分：观察者、被观察者�
   },BackpressureStrategy.BUFFER);//背压设置
   flowable.subsribe(subscriber);
   输出： test1->test2
-  
 ```
-## Actions
-### Consumer
-从上面可以看到FlowableSubscriper中我们只关心onNext方法，那么可以用Consumer来作观察者：‘’
+### 1.Actions
+#### Consumer
+从上面可以看到FlowableSubscriber中我们只关心onNext方法，那么可以用Consumer来作观察者：
 ```java
   flowable.subscribe(new Consumer<String>(){
     @Override
@@ -50,7 +48,7 @@ RxJava基于观察者模式，主要有四个部分：观察者、被观察者�
   或
   flowable.subscribe(new Consumer<String>(){
     @Override
-    public void accept(String s) throws Exception{
+    public void accept(String s) throws Exception{//onNext
     }
   },new Consumer<Throwable>(){//相当于onError
     @Override
@@ -70,7 +68,7 @@ RxJava基于观察者模式，主要有四个部分：观察者、被观察者�
   BigConsumer<T1,T2>: 双参数类型  
   Consumer<Object[]>: 多参数类型  
 ```
-## Observable和Observer
+### 2.Observable和Observer
 ```java
   Observable<String> observale = Observable.create(new ObservableOnSubscribe<String>(){
     @Override
@@ -99,14 +97,13 @@ RxJava基于观察者模式，主要有四个部分：观察者、被观察者�
   };
   observable.subscribe(observer);
 ```
-
-## Observable和Flowable
+### 3.Observable和Flowable区别
 以上发现，Observable和Flowable,前者不需要背压参数和请求资源操作。
 使用Observable: 不超过1000个元素、随着时间流逝基本不会oom;不支持Java Steam(Java 8新特性）；开销比Flowable低
-使用Flowable: 超过10K个元素;读写硬盘操作；通过JDBC读取数据库网络IO操作
-### BackPressure
+使用Flowable: 超过10K个元素;读写硬盘操作；通过JDBC读取数据库；网络IO操作
+### 4.BackPressure
 背压就是生产者的生产速度大于消费者消费速度从而导致的问题
-### Single和SingleObserver
+### 5.Single和SingleObserver
 单一事件流，即只有一个onNext事件，接着就触发onComplete或者onError
 Single只包含两个事件，一个是正常处理成功的onSuccess，另一个是处理失败的onError,它只发送一次消息
 ```java
@@ -136,7 +133,7 @@ Single只包含两个事件，一个是正常处理成功的onSuccess，另一�
     }
   });
 ```
-### Completable和CompletableObserver
+### 6.Completable和CompletableObserver
 如果观察者连onNext事件都不关心，可以使用Completable,它只有onComplete和onError两个事件：
 ```java
   Completable.create(enw CompletableOnSubscribe(){
