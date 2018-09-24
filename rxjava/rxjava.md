@@ -445,11 +445,118 @@ Flowable.intervalRange(0,10,1,1,TimeUnit.SECONDS)
           .subscribe(ele -> Log.i(TAG,""+ele));
   只会输出9，因为每当接收到一个元素的时候，会等待2秒，如果有新元素发送，则抛弃旧元素，使用新的元素，直到2秒过去或者没有新的数据
 ```
-
-
-
-
-
+### 四、合并聚合操作符
+### 1.startWidth/startWidthArray
+如果需要在被观察者发送元素之前追加数据或者追加新的被观察者，可以使用startWidth:
+```java
+  Flowable.just(3,4,5)
+          .startWidth(Flowable.just(1,2))
+          .startWidth(0)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  输出：0,1,2,3,4,5
+  一次性追加多个元素,可以使用startWidthArray:
+  Flowable.just(3,4,5)
+          .startWidthArray(0,1,2)
+          .subsrcibe(ele -> Log.i(TAG,""+ele));
+```
+### 2.concat/concatArray
+concat操作符可以连接最多4个被观察者，他们的顺序是串行执行的：
+```java
+  Flowable.concat(
+    Flowable.just(1,2,3),
+    Flowable.just(4,5,6)
+  ).subscribe(ele -> Log.i(TAG,""+ele));
+  输出：1,2,3,4,5,6；如果多于4个观察者合并在一起，可以使用concatArray:
+  Flowable.concatArray(
+    Flowable.just(1),Flowable.just(2)
+  ).subscribe(ele -> Log.i(TAG,""+ele));
+```
+### 3.merge/mergeArray
+合并多个被观察者，但他们合并后是按照时间线并行执行的：
+```java
+  Flowable.merge(
+    Flowable.intervalRange(0,3,1,1,TimeUnit.SECONDS),
+    Flowable.intervalRange(3,3,1,1,TimeUnit.SECONDS)
+  ).subscribe(ele -> Log.i(TAG,""+ele));
+  输出：0,3 -> 1,4 -> 2,5
+```
+### 4.concatDelayError/mergeDelayError
+使用concat和merge操作符时，如果遇到其中一个被观察者发出onError事件则会马上终止其他被观察者的事件。
+如果希望onError事件推迟到其他被观察者都结束后才触发，可以使用concatDelayError/mergeDelayError:
+```java
+  Flowable.mergeDelayError(
+    Flowable.create(s -> s.onError(new NullPointException()),BackpressureStrategy.ERROR),
+    Flowable.intervalRange(3,3,1,1,TimeUnit.SECONDS)\
+  ).subscribe(ele -> Log.i(TAG,""+ele));
+```
+### 5.zip
+多个被观察者压缩成单个的操作，如果多个被观察者数量不同，则以少的为基准，可以使用Functions来定义zip操作：
+```java
+  Flowable.zip(
+    Flowable.just(1,2,3),
+    Flowable.just(4,5),
+    (int1,int2) -> int1+int2
+  ).subscribe(ele -> Log.i(TAG,""+ele));
+  输出：5,7
+  对于delayError的操作是通过参数传递的，在zipper参数之后。zip操作符最多接受9个被观察者，这里zipper使用到的Functions按照
+  被观察者个数分别对应Function、BiFunction和Function3-Function9,其中apply()用于对应操作
+```
+### 6.combineLatest
+zip是一对一合并压缩，combineLatest是在同一时间线上，合并最后的元素：
+```java
+  Flowable.combineLatest(
+    Flowable.just(1,2,3),
+    Flowable.intervalRange(0,3,1,1,TimeUnit.SECONDS),
+    (int1,int2) -> int1+int2
+  ).subscribe(ele -> Log.i(TAG,""+ele));
+  只会合并3+0、3+1、3+2，即输出3,4,5。
+```
+### 7.combineLatestDelayError
+把combine的Functions用Object[]数组的Function来替代,而且作为第一参数：
+```java
+  Flowable.combineLatestDelayError(
+    objects -> objects[0]+objects[1],
+    Flowable.just(1,2,3),
+    Flowable.intervalRange(0,3,1,1,TimeUnit.SECONDS)
+  ).subscribe(ele -> Log.i(TAG,""+ele));
+```
+### 8.reduce
+把一个被观察者的所有元素都聚合成单一的元素：
+```java
+  Flowable.just(1,2,3)
+          .reduce((last,item) -> {
+            Log.i(TAG,last+","+item);
+            return last+item;
+          }).subscribe(ele -> Log.i(TAG,""+ele));
+  先执行1+2，然后1+2的结果和3相加，最后输出6
+```
+### 9.count
+统计一个被观察者发送多少个元素：
+```java
+  Flowable.just(1,2,3)
+          .count()
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  输出3
+  ```
+### 10.collect
+collect和reduce操作相似,不过他需要定义收集的容器和收集逻辑：
+```java
+  Flowable.just(1,2,3)
+          .collect(
+            new Callable<ArrayList<Integer>>(){//创建收集容器
+              @Override
+              public ArrayList<Integer> call() throws Exception{
+                return new ArrayList<>();
+              }
+            },new BiConsumer<ArrayList<Integer>,Integer>(){//收集操作
+              @Override
+              public void accept(ArrayList<Integer> list,Integer integer) throws Exception{//前者容器，后者数据
+                list.add(integer);
+              }
+            }
+          ).subscribe(ele-> Log.i(TAG,""+ele));
+  输出[1,2,3]这个ArrayList元素。
+```
 
 ## 官谢
 [Rxjava 2.x使用详解](https://maxwell-nc.github.io/android/rxjava2-1.html)
