@@ -176,6 +176,105 @@ onComplete或者onError
     @Override
     public void onError(Thrwoble e){}
   });
+``` 
+## 二、操作符
+### 1.just
+```java
+  Flowable.just("test","test2")
+          .subscribe(str -> Log.i("tag",str));
+  相当于顺序调用onNext("test")和onNext("test2"),让后调用onComplete()方法;另外，还可以使用
+  Observable/Single/Maybe来调用这个操作符，但Completable不能使用(因为没有onNext事件)。对于Flowable和Observable最多能接受10个参数，而Single和Maybe只能接受1个参数(只能发送一次onNext事件)。
 ```
+### 2.fromArray
+fromArray可以接受任意长度的数据数组
+```java
+  Flowable.fromArray(1,2,3,4,5)
+          .subscribe(num -> Log.i("tag",String.valueOf(num)));
+  fromArray可以直接传入一个数组，如：fromArray(new int[]{1,2,3}),但不要直接传递list集合
+```
+### 3.empty
+不会发送任何数据，而是直接发送onComplete事件
+```java
+  Flowable.empty().subscribe(
+    obj -> Log.i("tag","onNext:"+obj.toString()),
+    e -> Log.i("tag","onError:"+e),
+    () -> Log.i("tag","onComplete")
+  );
+  只会输出onComplete,其他回调不会触发
+```
+### 4.error
+```java
+  Flowable.error(new RuntimeException("test")).subscribe(
+    obj -> Log.i(TAG,"onNext:"+obj.toString()),
+    e -> Log.i(TAG,"onError:"+e),
+    () -> Log.i(TAG,"onComplete")
+  );
+  只会输出onError,其他回调不会触发
+```
+### 5.never
+什么都不会发送的操作符never,也不会触发观察者任何的回调：
+```java
+  Flowable.never().subscribe(
+    obj -> Log.i(TAG,"onNext:"+obj.toString()),
+    e -> Log.i(TAG,"onError"),
+    () -> Log.i(TAG,"onComplete")
+  );
+  不会输出任何log
+```
+### 6.fromIterable
+可以遍历可迭代数据集合：
+```java
+  List<String> list = new ArrayList<>();
+  list.add("a");
+  list.add("b");
+  list.add("c");
+  Flowabel.fromIterable(list).subscribe(
+    s -> Log.i(TAG,"s:"+s)
+   );
+   顺序输出：a -> b -> c
+```
+### 7.timer
+时间间隔操作符，可以指定一段时间发送数据(固定值0L):
+```java
+  Flowable.timer(1,TimeUnit.SECONDS)
+          //这里s是0,1,2,3....
+          .subscribe(s -> Log.i(TAG,String.valueOf(s)));
+  延迟1秒后调用onNext(0)，然后调用onComplete()事件
+```
+### 8.interval
+不断地发送数据：
+```java
+  Flowable.interval(3,1,TimeUnit.SECONDS)
+          .subscribe(s -> Log.i(TAG,String.valueOf(s)));
+  第一个参数是第一次延迟，第二个参数是间隔
+```
+### 9.intervalRange
+指定发送范围：
+```java
+  Flowable.intervalRange(1,10,3,1,TimeUnit.SECONDS)
+          //x从1到10，初始间隔2秒，之后间隔1秒发送一次
+          .subscribe(s -> Log.i(TAG,String.valueOf(s)));
+  注意，当x从1开始发送到10后(参数10是发送10个数量的意思，类似于request(10)操作)调用onComplete方法,从最后一个元素发出dao9onComplete之间并不会有period长度的延迟
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ## 官谢
 [Rxjava 2.x使用详解](https://maxwell-nc.github.io/android/rxjava2-1.html)
