@@ -136,49 +136,47 @@ var a=function(i){
 ```
 2.在res目录下创建config.xml文件并配置插件feature及白名单
 ```java
-  <?xml version="1.0" encoding="utf-8"?><!--情况cordova官网-->
+<?xml version="1.0" encoding="utf-8"?><!--情况cordova官网-->
 <widget xmlns:cdv="http://cordova.apache.org/ns/1.0"
-    id="io.cordova.hybrid"
-    version="1.0.0"
-    xmlns="http://www.w3.org/ns/widgets">
-    <!--cordova自带的log输出级别配置-->
-    <preference
-        name="loglevel"
-        value="DEBUG" />
-    <!--定义应用程序的起始页.请看ConfigXmlParser的setStartUrl-->
-    <content src="index.html" />
-    <!--允许访问所有域名,请看http://cordova.axuer.com/docs/zh-cn/latest/reference/cordova-plugin-whitelist/-->
-    <access origin="*" />
-    <!--允许系统打印超链接url,请看http://cordova.axuer.com/docs/zh-cn/latest/reference/cordova-plugin-whitelist-->
-    <allow-intent href="*://*.xxx.com/*" />
-    <allow-intent href="tel:*" />
-    <allow-intent href="sms:*" />
-    <allow-intent href="mailto:*" />
-    <allow-intent href="geo:*" />
-    <platform name="android">
-        <allow-intent href="market:*" />
-    </platform>
-    <!--允许webView可以导航到的url-->
-    <allow-navigation href="*://*.xxx.com/*" />
-    <!--白名单插件-->
+   id="io.cordova.hybrid"
+   version="1.0.0"
+   xmlns="http://www.w3.org/ns/widgets">
+   <!--cordova自带的log输出级别配置-->
+   <preference
+       name="loglevel"
+       value="DEBUG" />
+   <!--定义应用程序的起始页.请看ConfigXmlParser的setStartUrl-->
+   <content src="index.html" />
+   <!--允许访问所有域名,请看http://cordova.axuer.com/docs/zh-cn/latest/reference/cordova-plugin-whitelist/-->
+   <access origin="*" />
+   <!--允许系统打印超链接url,请看http://cordova.axuer.com/docs/zh-cn/latest/reference/cordova-plugin-whitelist-->
+   <allow-intent href="*://*.xxx.com/*" />
+   <allow-intent href="tel:*" />
+   <allow-intent href="sms:*" />
+   <allow-intent href="mailto:*" />
+   <allow-intent href="geo:*" />
+   <platform name="android">
+       <allow-intent href="market:*" />
+   </platform>
+   <!--允许webView可以导航到的url-->
+   <allow-navigation href="*://*.xxx.com/*" />
+   <!--白名单插件-->
+   
+   <!--测试插件testPlugin,see to ConfigXmlParser.java-->
+   <feature name="TestPlugin"><!--name：service -->
+       <!--value：插件类-->
+       <param
+           name="android-package"
+           value="com.ckr.baseframework.plugin.TestPlugin" />
+   </feature>
+   <preference
+       name="AppendUserAgent"
+       value="hybrid-common" />
+   <preference
+       name="errorUrl"
+       value="file:///android_asset/www/error.html" />
 
-    <!--测试插件testPlugin-->
-    <feature name="TestPlugin"><!--name：service -->
-        <!--value：插件类名-->
-        <param
-            name="android-package"
-            value="com.ckr.baseframework.plugin.TestPlugin" />
-    </feature>
-
-    <preference
-        name="AppendUserAgent"
-        value="ydh-android/5.0.0" />
-
-    <preference
-        name="errorUrl"
-        value="file:///android_asset/www/error.html" />
-
-  </widget>
+</widget>
 ```
 3.在assets/www目录下创建plugin文件夹，并添加testPlugin.js暴露该插件的方法
 ```javascript
@@ -235,7 +233,7 @@ var a=function(i){
 
 ```
 接着，在index.html创建一个button,用于插件调试
-```javascript
+```html
   <!DOCTYPE html>
   <html>
       <head>
