@@ -180,3 +180,135 @@ var a=function(i){
 
   </widget>
 ```
+3.在assets/www目录下创建plugin文件夹，并添加testPlugin.js暴露该插件的方法
+```javascript
+  cordova.define("com.ckr.hybrid.TestPlugin",function(require,exports,module){
+    var exec = require('cordova/exec');/*see to exec.js/androidExec(success, fail, service, action, args)*/
+    module.exports={
+        testNoArgs: function(sucCallback,errCallback,args){
+            exec(sucCallback,errCallback,"TestPlugin","testNoArgs",[args]);
+        },
+        testWithArgs: function(sucCallback,errCallback,args){
+            exec(sucCallback,errCallback,"TestPlugin","testWithArgs",[args]);
+        },
+    };
+  });
+```
+接着，在cordova_plugins.js里声明插件对象
+```javascript
+  cordova.define('cordova/plugin_list', function(require, exports, module) {
+    module.exports = [
+        {
+            "file":"plugin/testPlugin.js",
+            "id": "com.ckr.hybrid.TestPlugin",
+            "clobbers":[
+                "hybrid.test"
+            ]
+        },
+    ];
+    module.exports.metadata = 
+    // TOP OF METADATA
+    {
+      "cordova-plugin-whitelist": "1.3.3"
+    };
+    // BOTTOM OF METADATA
+  });
+```
+4.在assets/www/js创建debug目录，及test.js文件
+```javascript
+  function testNoArgs(){
+    hybrid.test.testNoArgs(function(args){
+        alert("success:"+args);
+    },function(err){
+        alert("failure:"+err);
+    });
+  }
+  function testWithArgs(){
+      hybrid.test.testWithArgs(function(args){
+          alert("success:"+args);
+      },function(err){
+          alert("failure:"+err);
+      },'带参函数');
+  }
+  document.getElementById('testNoArgs').addEventListener('click',testNoArgs);
+  document.getElementById('testWithArgs').addEventListener('click',testWithArgs);
+
+```
+接着，在index.html创建一个button,用于插件调试
+```javascript
+  <!DOCTYPE html>
+  <html>
+      <head>
+          <!--
+          Customize this policy to fit your own app's needs. For more guidance, see:
+              https://github.com/apache/cordova-plugin-whitelist/blob/master/README.md#content-security-policy
+          Some notes:
+              * gap: is required only on iOS (when using UIWebView) and is needed for JS->native communication
+              * https://ssl.gstatic.com is required only on Android and is needed for TalkBack to function properly
+              * Disables use of inline scripts in order to mitigate risk of XSS vulnerabilities. To change this:
+                  * Enable inline JS: add 'unsafe-inline' to default-src
+          -->
+          <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: gap: https://ssl.gstatic.com 'unsafe-eval'; style-src 'self' 'unsafe-inline'; media-src *; img-src 'self' data: content:;">
+          <meta name="format-detection" content="telephone=no">
+          <meta name="msapplication-tap-highlight" content="no">
+          <meta name="viewport" content="user-scalable=no, initial-scale=1, maximum-scale=1, minimum-scale=1, width=device-width">
+          <link rel="stylesheet" type="text/css" href="css/index.css">
+          <title>Hello World</title>
+      </head>
+      <body>
+          <div class="app">
+              <h1>Apache Cordova</h1>
+              <div id="deviceready" class="blink">
+                  <p class="event listening">Connecting to Device</p>
+                  <p class="event received">Device is Ready</p>
+              </div>
+              <button id="testNoArgs">test</button>
+              <button id="testWithArgs">带参test</button>
+          </div>
+          <script type="text/javascript" src="cordova.js"></script>
+          <script type="text/javascript" src="js/index.js"></script>
+          <script type="text/javascript" src="js/debug/test.js"></script>
+      </body>
+  </html>
+```
+最后，在TestPlugin实现业务逻辑
+```java
+  public class TestPlugin extends CordovaPlugin {
+    private static final String TAG = "TestPlugin";
+
+
+    @Override
+    public void initialize(CordovaInterface cordova, CordovaWebView webView) {
+        super.initialize(cordova, webView);
+        Logd(TAG, "execute: cordova:" + cordova + ",webView:" + webView);
+
+    }
+
+    @Override
+    protected void pluginInitialize() {
+        super.pluginInitialize();
+    }
+
+    @Override
+    public boolean execute(String action, CordovaArgs args, CallbackContext callbackContext) throws JSONException {
+        Logd(TAG, "execute: action:" + action + ",cordovaArgs:" + args);
+        return doInBackground(action, args, callbackContext);
+    }
+
+    private boolean doInBackground(String action, CordovaArgs args, CallbackContext callbackContext) {
+        if (PluginAction.TEST_NO_ARGS.equals(action)) {
+            callbackContext.success("回调成功");
+            return true;
+        } else if (PluginAction.TEST_WITH_ARGS.equals(action)) {
+            callbackContext.error("回调失败");
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+    }
+  }
+```
