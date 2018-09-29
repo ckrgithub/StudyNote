@@ -666,7 +666,119 @@ any操作符可以判断是否存在某个元素满足一定的条件，
           .subscribe(ele -> Log.i(TAG,""+ele));
   少于2的元素被跳过，即输出2,3,4。注意，如果.skipWhile(item -> item>2)是不会跳过任何发射元素的，因为skipWhile只会过滤一开始的数据,不能跳过中间或者以后的数据
 ```
-
+## 六、变换操作符
+### 1.Map
+可以把每一个元素转换成新的元素发射，接收一个Function<T,R>作为转换逻辑的操作
+```java
+  Flowable.just(1,2,3)
+          .map(integer -> "int"+integer)
+          .subscribe(ele -> Log.i(TAG,""+ele))
+  map操作符返回Flowable<String>,最终输出：int1,int2,int3
+```
+### 2.flatMap
+Map是把每个元素转换成一个新的元素,但是flatMap是把每个元素转换成新的被观察者,每个被观察者发射的元素将合并成新的被观察者,这些元素顺序输出
+```java
+  Flowable.just(1,2,3)
+          .flatMap(
+            (Function<Integer,Publisher<?>>)integer -> Flowable.just("a",integer)
+          ).subscribe(ele -> Log.i(TAG,""+ele));
+  把每个just发射的元素转换成新的Flowable，而每个新的Flowable额外添加一个“a”元素。输出：a、1、a、2、a、3
+```
+### 3.flatMapIteralbe
+把每个元素转换成Iterable
+```java
+  Flowable.just(1,2,3)
+          .flatMapIterable(
+            (Function<Integer,Iterable<?>>)integer -> Arrays.asList("a",integer)
+          ).subscribe(ele -> Log.i(TAG,""+ele));
+  把每个元素转换成一个list，每个list以元素“a”开头，所以输出结果：a、1、a、2、a、3
+```
+### 4.concatMap
+```java
+  Flowable.just(1,2,3)
+          .concatMap(integer -> Flowable.just("a",integer))
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  输出结果：a、1、a、2、a、3。flatMap是使用merge合并元素,concatMap是concat合并元素，前者可能出现元素交错，后者严格按照顺序发射
+```
+### 5.switchMap
+与flatMap类似,但是转换出来的每个新的数据(被观察者)发射会取代前一个被观察者
+```java
+  Flowable.just(1,2,3)
+          .switchMap(integer -> Flowable.timer(1,TimeUnit.SECONDS).map(value -> integer))//延迟1s发送元素
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  最终只输出3这个元素,其他元素被覆盖替代掉不再发送
+```
+### 6.cast
+强制转换每个元素的类型，内部调用map操作符进行转换
+```java
+  Flowable.just(1,2,3)
+          .cast(Number.class)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  把每个元素都转换成Number类型，再发射
+```
+### 7.scan
+扫描每个元素，第一个元素将忽略，从第二个元素开始(可以获得上一个元素的值)进行变换后返回
+```java
+  Flowable.just(1,2,3)
+          .scan((last,item) ->{
+            Log.i(TAG,last+"-"+item)
+            return item+1;
+          }).subscribe(ele -> Log.i(TAG,""+ele));
+  输出结果：1、3、4
+```
+### 8.buffer
+把多个元素打包成一个元素一次过发送数据
+```java
+  Flowable.just(1,2,3,4,5)
+          .buffer(3)
+          .subscribe(list -> Log.i(TAG,list.toString()));
+  把三个元素组合成一个list发送,输出结果：[1,2,3]、[4,5]
+```
+### 9.toList
+把所有元素转换为一个list一次发送出去
+```java
+  Flowable.just(1,2,3,4,5)
+          .toList()
+          .subscribe(list -> Log.i(TAG,list.toString()));
+  输出结果：[1,2,3,4,5]
+```
+### 10.groupBy
+通过Function接收每个数据的分组key，然后返回GroupedFlowable，使用者可以再订阅这个被观察者进行数据输出
+```java
+  Flowable.just(1,2,3,4,5)
+          .groupBy(
+            new Function<Integer,String>(){
+              @Override
+              public String apply(Integer integer) throws Exception{
+                //这里返回值是分组的key
+                return integer > 2? "A组":"B组"
+              }
+            }
+          ).subscribe(
+            new Consumer<GroupdFlowable<String,Integer>>(){
+              @Override
+              public void accept(GroupedFlowable<String,Integer> groupedFlowable) throws Exception {
+                groupedFlowable.subscribe(new Consumer<Integer>(){
+                    @Override
+                    public void accept(Integer integer) throws Exception{
+                      String key = groupedFlowable.getKey();
+                      Log.i(TAG,key+":"+integer);
+                    }
+                  }
+                )
+              }
+            }
+          )
+    输出："B组：1、B组：2、A组：3、A组：4、A组：5"
+```
+### 11.toMap
+可以通过自定义key、value转换成对应map
+```java
+  Flowable.just(1,2,3,4,5)
+          .toMap(integer -> "key"+integer)//第一个参数Function返回Map的key
+          .subscribe(map -> Log.i(TAG,""+map.toString()));
+   输出： “{key5=5,key2=2,key4=4,key1=1,key3=3}”
+```
 
 ## 感谢
 [Rxjava 2.x使用详解](https://maxwell-nc.github.io/android/rxjava2-1.html)
