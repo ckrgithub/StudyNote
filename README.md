@@ -2,7 +2,7 @@
 ## 一、获取升级信息
 ### 1.链接 
 ```
-[url过长]:https://api.dinghuo123.com/public/specialVersion?platform=Android&systemVersion=6.0&imei=865903038578968&isBrand=0&versionCode=312&versionName=3.19.0&userId=&userName=&dbid=
+[url过长]:https://api.xxx.com/public/specialVersion?platform=Android&systemVersion=6.0&imei=865903038578968&isBrand=0&versionCode=312&versionName=3.19.0&userId=&userName=&dbid=
 ```
 ### 2.数据结构
 ```
