@@ -557,6 +557,116 @@ collect和reduce操作相似,不过他需要定义收集的容器和收集逻辑
           ).subscribe(ele-> Log.i(TAG,""+ele));
   输出[1,2,3]这个ArrayList元素。
 ```
+## 五、条件操作符
+### 1.all
+要判断所有元素是否满足某个条件，可以使用all操作符，它接收一个Predicate。
+```java
+  Flowable.just(1,2,3)
+          .all(integer -> integer >=0)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  all操作符会把被观察者转换成Single<Boolean>类型的被观察者，最终输出结果为true
+```
+### 2.ambArray
+可以从多个被观察者中选择第一个发射元素的被观察者进行处理，其他被观察者抛弃，
+```java
+  Flowable.ambArray(
+    Flowable.timer(1,TimeUnit.SECONDS),
+    Flowable.just(3,4,5)//仅处理第一个发射元素的被观察者
+  ).subscribe(ele -> Log.i(TAG,""+ele));
+  输出结果：3,4,5
+```
+### 3.contains
+判断被观察者是否包含某个元素，可以使用contains操作符:
+```java
+  Flowable.just(3,4,5)
+          .contains(3)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  判读被观察者发射元素中是否包含3,contains操作符会把被观察者转换成Single<Boolean>类型的被观察者，输出结果为true
+```
+### 4.any
+any操作符可以判断是否存在某个元素满足一定的条件，
+```java
+  Flowable.just(3,4,5)
+          .any(integer -> integer ==3)
+          .subscribe(ele -> Log.i(TAG,""+ele))
+  输出结果：true
+```
+### 5.isEmpty
+判断一个被观察者是否发射元素，
+```java
+  Flowable.just(3,4,5)
+          .isEmpty()
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  输出false
+```
+### 6.defaultIfEmpty
+需要在被观察者不发送数据的时候，需要发送一个默认的元素：
+```java
+  Flowable.empty()
+          .defualIfEmpty(1)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  输出结果：1
+```
+### 7.switchIfEmpty
+在被观察者不发送数据时，需要发送更多数据
+```java
+  Flowable.empty()
+          .switchIfEmpty(Flowable.just(3,4,5))
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  输出：3,4,5
+```
+### 8.sequenceEqual
+对比两个被观察者发射的元素队列，只关心两个发射队列的元素、元素发射的顺序、和最终状态：
+```java
+  Flowable.sequenceEqual(
+    Flowable.just(0L,1L,2L),
+    Flowable.intervalRange(0,3,0,1,TimeUnit.SECONDS)
+  ).subscribe(ele -> Log.i(TAG,""+ele));
+  假设要定义Integer和Long类型值相等则认为两个元素相等，可以添加额外的参数isEqual:
+  Flowable.sequenceEqual(
+    Flowable.just(0,1,2),
+    Flowable.intervalRange(0,3,0,1,TimeUnit.SECONDS),
+    (num1,num2) -> num1.longValue() == num2.longValue()
+  ).subscribe(ele -> Log.i(TAG,""+ele));
+  上述第一种类型返回false,第二种返回true
+```
+### 9.takeUntil
+执行到某个条件就停止事件：
+```java
+  Flowable.just(1,2,3)
+          .takeUntil(integer -> integer==2)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  当元素==2时则停止，所以输出1,2。输出结果包含该元素。除此之外，takeUntil也可以接受另一个被观察者，当这个被观察者结束之后则停止第一个被观察者
+  Flowable.interval(100,TimeUnit.MILLSECONDS)
+          .takeUntil(Flowable.timer(1,TimeUnit.SECONDS))
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  在1秒后停止interval生成的被观察者，所以输出结果：0,1,2,3,4,5,6,7,8.
+```
+### 10.takeWhile
+只接受Predicate，而且Predicate中返回true才执行被观察者的事件
+```java
+  Flowable.interval(100,TimeUnit.MILLISECONDS)
+          .takeWhile(item -> item!=5L)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  输出结果：0,1,2,3,4，注意不包括5这个元素。
+```
+### 11.skipUntil
+接收一个被观察者，知道该被观察者发送事件之前，第一个被观察者所有发送的元素将被抛弃
+```java
+  Flowable.intervelRange(0,10,0,1,TimeUnit.SECONDS)
+          .skipUntil(Flowable.timer(3,TimeUnit.SECONDS))
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  表示intervalRange生成的被观察者前3秒的发送的元素都会被抛弃，所以最终输出结果：3,4,5,6,4,7,8,9。
+```
+### 12.skipWhile
+接受一个Predicate用于控制跳过开始一段数据
+```java
+  Flowable.intervalRange(0,5,0,100,TimeUnit.MILLISECONDS)
+          .skipWhile(item -> item<2)
+          .subscribe(ele -> Log.i(TAG,""+ele));
+  少于2的元素被跳过，即输出2,3,4。注意，如果.skipWhile(item -> item>2)是不会跳过任何发射元素的，因为skipWhile只会过滤一开始的数据,不能跳过中间或者以后的数据
+```
 
-## 官谢
+
+## 感谢
 [Rxjava 2.x使用详解](https://maxwell-nc.github.io/android/rxjava2-1.html)
