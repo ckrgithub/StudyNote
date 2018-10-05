@@ -352,7 +352,8 @@ Room是一种ORM(对象关系映射)模式数据库框架,对android SQLite的�
     public String date;//默认columinfo为date
   }
 ```
-
+## 感谢
+[Lifecycle+Retrofit+Room](http://www.canking.win/2017/12/09/mvvm/)
 
 
 
