@@ -10,7 +10,28 @@
 ![](http://www.canking.win/2017/12/09/mvvm/arch1.png)
 ## 三、组件用法
 ### 1.Lifecycle
-一个android组件生命周期感知回调的控件，可以感知activity或fragment的生命周期变化，并回调相应接口。
+一个android组件生命周期感知回调的控件，可以感知activity或fragment的生命周期变化，并回调相应接口。这种感知确保
+LiveData只更新处于生命周期状态内的应用程序组件。
+LiveData是由observer类表示的观察者视为处于活动状态，如果其生命周期处于started或resumed状态，LiveData会将观察者视为活动状态，
+并通知其数据的变化。LiveData未注册的观察者对象以及非活动观察者是不会收到有关更新的通知。
+优点：
+* 确保UI界面的数据状态
+```
+  LiveData遵循观察者模式。LiveData在生命周期状态更改时通知Observer对象，更新这些Observer对象中的UI。观察者可以
+  在每次应用程序数据更改时更新UI，而不是每次发生更改时更新UI。
+```
+* 没有内存泄漏 
+```
+  当观察者被绑定它们对应的Lifecycle以后，当页面销毁时它们会自动被移除，不会导致内存溢出
+```
+* 不会因为activity不可见导致Crash
+```
+  当Activity不可见时，即使有数据变化，LiveData也不会通知观察者。
+```
+* 共享资源
+```
+  只需要一个LocationLiveData连接系统服务一次，就能支持所有的观察者
+```
 ```java
   public abstract class Lifecycle{
     @MainThread
@@ -307,9 +328,29 @@ LiveData是一个持有泛型类型的数据组件，将App生命组件与数据
 LiveData有两个实现类:MutableLiveData和MediatorLiveData。其中，MutableLiveData值暴露两个方法：postData()和setData().
 MediatorLiveData有个addSource()方法,可以监听另一个或多个LiveData数据源变化
 ### 3.ViewModel
-ViewModel相当于一层数据隔离层，将UI层的数据逻辑全部抽离干净，管理底层数据的获取方式和逻辑
+ViewModel类设计目的是以一种关注生命周期的方式存储和管理与UI相关的数据，相当于一层数据隔离层，将UI层的数据逻辑全部抽离干净，管理底层数据的获取方式和逻辑
 ```java
   ViewModel viewModel = ViewModelProviders.of(this).get(CkrModel.class);
+```
+定义ViewModel和创建LiveData
+```java
+  public class AccountModel extends AndroidViewModel{
+    //创建LiveData
+    private MutableLiveData<AccountBean> mAccount = new MutableLiveData<>();
+    public AccountModel(@NonNull Application application){
+      super(application);
+    }
+    public void setAccount(String name,String phone){
+      mAccont.setValue(new AccountBean(name,phone));
+    }
+    public MutableLiveData<AccountBean> getAccount(){
+      return mAccount;
+    }
+    @Override
+    protected void onCleared(){
+      super.onCleared();
+    }
+  }
 ```
 ### 4.Room
 Room是一种ORM(对象关系映射)模式数据库框架,对android SQLite的抽象封装。Room用法：
@@ -354,6 +395,7 @@ Room是一种ORM(对象关系映射)模式数据库框架,对android SQLite的�
 ```
 ## 感谢
 [Lifecycle+Retrofit+Room](http://www.canking.win/2017/12/09/mvvm/)
+[Android架构组件ViewModel和LiveData介绍及使用](https://blog.csdn.net/mjb00000/article/details/79495461)
 
 
 
