@@ -55,7 +55,7 @@
 ```
 ### 2.LiveData
 LiveData是一个持有泛型类型的数据组件，将App生命组件与数据关联到一起。
-```
+```java
   public abstract class LiveData<T>{
     private final Objcet mDataLock = new Object();
     static final int START_VERSION=-1;
