@@ -176,10 +176,56 @@ static class UserPet{
   public String petName;
 }
 ```
-
-
-
-
+### 数据库升级
+```java
+  Room.databaseBuilder(mContext,MyDb.class,"database-name").addMigrations(MIGRATION_1_2,MIGRATION_2_3).build();
+  static final Migration MIGRATION_1_2 = new Migration(1,2){
+    @Override
+    public void migrate(SupportSQLiteDatabase database){
+      database.execSQL("CREATE TABLE 'Fruit' ('id' INTEGER, 'name' TEXT, PRIMARY KEY('id'))");
+    }
+  };
+  static final Migration MIGRATION_2_3 = new Migration(2,3){
+    @Override
+    public void migrate(SupportSQLiteDatabase database){
+      database.execSQL("ALTER TABLE Book ADD COLUMN pub_year INTEGER");
+    }
+  }
+```
+导出数据库的模式信息到json文件
+```java
+  android {
+    defaultConfig {
+      javaCompileOptions {
+        annotationProcessorOptions {
+          arguments = ["room.schemaLocation": "$projectDir/schemas".toString()]
+        }
+      }
+    }
+  }
+```
+### 复杂数据类型
+* 使用类型转换(TypeConverter)
+* 理解Room为什么不允许对象引用
+```java
+  public class Converters {
+    @TypeConverter
+    public static Data fromTimestamp(Long value){
+      return value ==null ? null : new Date(value);
+    }
+    
+    @TypeConverter
+    public static Long dateToTimestamp(Date date){
+      return date == null ? null : date.getTime();
+    }
+  }
+  
+  @Database(entities ={User.class},version=1)
+  @TypeConverters({Converters.classs})
+  public abstract classs AppDatabase extends RoomDatabase{
+    public abstract UserDao userDao();
+  }
+```
 
 
 
