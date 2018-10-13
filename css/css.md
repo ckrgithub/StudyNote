@@ -254,7 +254,7 @@ td.fancy {
     <style type="text/css">
       hr {color: sienna;}
       p {margin-left: 20px}
-      body {background-image: url("images/back40.gif");}
+      body {background-image: url('images/back40.gif');}
     </style>
   </head>
 ```
@@ -282,6 +282,77 @@ td.fancy {
     font-size: 20pt;
   }
 ```
+## 二、css 样式
+### 1.css背景
+css允许应用纯色作为背景，也允许使用背景图像创建相当复杂的效果
+* 背景色：使用background-color 属性为元素设置背景色
+```css
+  p {background-color: gray;
+```
+可以为所有元素设置背景色，这包括body一直到em和a等行内元素。background-color不能继承，默认值时transparent。也就是说，如果一个元素
+没有指定背景色，那么背景是透明的。
+* 背景图像：要把图像放入背景，需要使用background-image属性，默认值是none
+```css
+  body {background-image: url('/images/logo.jpg');}
+```
+* 背景重复：如果需要在页面上对背景图像进行平铺，可以使用background-repeat 属性
+属性repeat导致图像水平垂直方向上都平铺。repeat-x和repeat-y分别导致图像只在水平或垂直方向上平铺，no-repeat则不允许图像在任何方向平铺
+```css
+  body {
+    background-image: url('/images/logo.jpg');
+    background-repeat: repeat-y;
+  }
+```
+* 背景定位：利用background-position 属性改变图像在背景中的位置
+```css
+  body {
+    background-image: url('/images/logo.jpg');
+    background-repeat: no-repeat;
+    background-position: center;
+  }
+```
+为background-position属性提供值有很多方法，首先，可以使用一些关键字：top、bottom、left、right和center。也可以使用长度值，如10px或5cm；也可以使用百分数值，如10%
+* 关键字
+位置关键字可以按任何顺序出现，只要保证不超过两个关键字：一个对应水平方向，另一个对应垂直方向。如果出现一个关键字，则认为另一个关键字是center.
+如：希望每个段落的中部上方出现一个图形
+```css
+  p {
+    background-image: url('/images/logo.jpg');
+    background-repeat: no-repeat;
+    background-position: top;
+  }
+```
+* 百分数值
+```css
+  body {
+    background-image: url('/images/logo.jpg');
+    background-repeat: no-repeat;
+    background-position: 50% 50%;
+  }
+```
+这会导致图像适当放置，其中心与其元素的中心对齐，也就是说，百分数值同时应用于元素和图像。
+* 长度值：元素内边距区左上角的偏移。偏移点是图像的左上角。
+```css
+  body {
+    background-image: url('/images/logo.jpg');
+    background-repeat: no-repeat;
+    background-position: 50px 100px;
+  }
+```
+* 背景关联：
+如果文档比较长，那么当文档向下滚动时，背景图像也会随之滚动。当文档滚动到超过图像的位置时图像就会消失
+可以使用 background-attachment属性防止这种滚动。
+```css
+  body {
+    background-image: url('/images/logo.jpg');
+    background-repeat: no-repeat;
+    background-attachment: fixed
+  }
+```
+
+
+
+
 
 
 
