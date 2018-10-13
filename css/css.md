@@ -222,14 +222,14 @@ td.fancy {
   </form>
 ```
 #### 选择器参考手册
-|选择器|描述|
-|[attribute]|用于选取带有指定属性的元素|
-|[attribute=value]|用于选取带有指定属性和值的元素|
-|[attribute~=value]|用于选取属性值中包含指定词汇的元素|
-|[attribute|=value]|用于选取带有以指定值开头的属性值的元素,该值必须是整个单词|
-|[attribute^=value]|匹配属性值以指定值开头的每个元素|
-|[attribute$=value]|匹配属性值以指定值结尾的每个元素|
-|[attribute*=value]|匹配属性值中包含指定值的每个元素|
+| 选择器 | 描述 |
+| [attribute] | 用于选取带有指定属性的元素 |
+| [attribute=value]  | 用于选取带有指定属性和值的元素 |
+| [attribute~=value] | 用于选取属性值中包含指定词汇的元素 |
+| [attribute|=value] | 用于选取带有以指定值开头的属性值的元素,该值必须是整个单词 |
+| [attribute^=value] | 匹配属性值以指定值开头的每个元素 |
+| [attribute$=value] | 匹配属性值以指定值结尾的每个元素 |
+| [attribute*=value] | 匹配属性值中包含指定值的每个元素 |
 ### 10.如何创建css
 如何插入样式表
 当读到一个样式表时，浏览器会根据它来格式化html文档。插入样式表的方法有三种:
@@ -349,6 +349,225 @@ css允许应用纯色作为背景，也允许使用背景图像创建相当复�
     background-attachment: fixed
   }
 ```
+### 2.css文本
+css文本属性可定义文本的外观。
+通过文本属性，你可以改变文本的颜色、字符间距，对齐文本，装饰文本，对文本进行缩进等。
+#### 缩进文本
+text-indent属性可以方便地实现文本缩进
+所有段落的首行缩进5em:
+```css
+  p {
+    text-indent: 5em;
+  }
+```
+注意：可以为所有块级元素应用text-indent，但无法将该属性应用于行内元素，图像之类的替换元素也无法应用
+  text-indent属性。不过，如果一个块级元素的首行中有一个图像，它会随改行的其余文本移动
+* 使用负值：可以实现很多有趣的效果，比如"悬挂缩进"，即第一行悬挂在元素中余下部分的左边：
+```css
+  p {
+    text-indent: -5em;
+  }
+```
+不过在为text-indent设置负值时要当心，如果对一个段落设置了负值，那么首行的某些文本可能会超出浏览器窗口的左边界。
+为了避免出现这种显示问题，建议针对负缩进再设置一个外边距或内边距：
+```css
+  p {
+    text-indent: -5em;
+    padding-left: 5em;
+  }
+```
+* 使用百分比值：相对于缩进元素的父元素的宽度
+在下例中，缩进值是父元素的20%，即100个像素：
+```css
+  div {width: 500px;}
+  p {text-indent: 20%;}
+  <div>
+    <p>this is a paragragh</p>
+  </div>
+```
+* 继承
+```css
+  div#outer {width: 500px;}
+  div#inner {text-indent: 10%;}
+  p {width: 200;}
+  
+  <div id="outer">
+  <div id="inner">some text
+    <p>this is a paragragh</p>
+  </div>
+  </div>
+```
+标记中的段落会缩进50像素，这是因为段落继承id为inner的div元素的缩进值
+#### 水平对齐
+text-align: 会影响一个元素中的文本行互相之间的对齐方式。
+可能值有left、right、center、justify、inherit
+你可能会认为text-align: center与<CENTER>元素的作用一样，但实际上二者大不相同
+<CENTER>不仅影响文本，还会把整个元素居中。text-align不会控制元素的对齐，而只影响内部内容。
+#### 字间距
+word-spacing可以改变字之间的标准间隔。word-spacing属性接受一个正长度值或负长度值。
+```css
+  p.spread {word-spacing: 30px;}
+  p.tight {word-spacing: -0.5em;}
+  
+  <p class="spread">
+    This is a paragraph
+  </p>
+  <p class="tight">
+    this is a paragraph
+  </p>
+```
+#### 字母间距
+letter-spacing: 字母间隔修改的是字符或字母之间的间隔
+```css
+  h1 {letter-spacing: -0.5em}
+  h4 {letter-spacing: 20px}
+  
+  <h1>this is a head 1 </h1>
+  <h4>this is a head 4 </h4>
+```
+#### 字符转换
+text-transform: 处理文本的大小写。有4个值：
+* none: 对文本不做任何改动
+* uppercase: 转换为大写
+* lowercase: 转换为小写
+* capitalize: 只对每个单词的首字母大写
+#### 文本装饰
+text-decoration有5个值：
+* none: 关闭原本应用到一个元素上的所有装饰
+* underline: 对元素加下划线
+* overline: 对元素加上划线
+* line-through: 在文本中间画一个贯穿线
+* blink: 让文本闪烁
+```css
+  <!--所有超链接即有下划线，又有上划线-->
+  a:link a:visited {text-decoration: underline overline;}
+```
+#### 处理空白符
+white-space: 对文档中的空格、换行和tab字符的处理
+* normal
+```css
+  p {
+    white-space: normal;<!--丢掉多余的空白符，换行字符(回车)会转换为空格，一行中多个空格会转为一个空格-->
+  }
+  <p>This   paragraph has  
+    many spaces    in it</p>
+```
+* nowrap:防止元素中的文本换行，除非使用了一个br元素
+* pre-wrap和pre-line
+如果元素white-space设置为pre-wrap，那么该元素中的文本会保留空白符序列，但文本行会正常地换行。pre-line:会合并空白符序列，但保留换行符
+
+### css字体
+css字体属性定义文本的字体系列、大小、加粗、风格和变形
+#### css字体系列
+在css中，有两种不同类型的字体系列名称：
+* 通用字体系列 - 拥有相似外观的字体系统组合(如：Serif 或 Monospace)
+* 特定字体系列 - 具体的字体系列(Times 或 Courier)
+font-family: 定义文本的字体系列
+```css
+  body {
+    font-family: sans-serif Times, 'New York',Georgia;
+  }
+```
+注意，只有当字体名中有一个或多个空格(如：New York)，或字体名包括#或$之类的符号，才需要加引号
+#### 字体风格
+font-style: 规定斜体文本。该属性有三个值：
+* normal - 文本正常显示
+* italic - 文本斜体显示
+* oblique - 文本倾斜显示
+italic是一种简单的字体风格，对每个字母的结构有些小改动，来反映变化的外观。oblique是正常竖直文本的一个倾斜版本
+#### 字体变形
+font-variant: 设定小型大写字母，即采用不同大小的大写字母
+```css
+  p {font-variant: small-caps;}
+```
+#### 字体加粗
+font-weight: 设置文本的粗细
+使用bold关键字设置文本为粗体
+关键字100~900为字体指定9级加粗度。数字400等价于normal,而700等价于bold
+#### 字体大小
+font-szie: 设置文本的大小，值可以是绝对或相对值
+绝对值：将文本设置为指定的大小；不允许用户在所有浏览器中改变文本大小；绝对大小在确定了输出的物理尺寸时很有用
+相对大小：相对周围的元素来设置大小；允许用户在浏览器改变文本大小
+* 使用em来设置字体大小
+1em等于当前的字体尺寸。如果一个元素的font-size为16像素，那么对于该元素，1em就等于16像素。浏览器默认的文本大小是16像素。因此1em
+的默认尺寸是16像素。公式：em=pixels/16。(注：16等于父元素的默认字体大小，假设父元素的font-size为20px,那公式：em=pixels/20)
+### css链接
+#### 设置链接样式
+链接特殊性在于能够根据它们所处的状态来设置它们的样式。链接的四种状态：
+* a:link - 普通的、未被访问的链接
+* a:visited - 用户已访问的链接
+* a:hover - 鼠标指针位于链接的上方
+* a:active - 链接被点击的时刻
+```css
+  a:link {color: #ff0000;}
+  a:visited {color: #00ff00;}
+  a:hover {color: #ff00ff;}
+  a:active {color:#0000ff;}
+```
+当为链接的不同状态设置样式时，请按照以下次序规则：
+* a:hover 必须位于a:link 和 a:visited之后
+* a:active 必须位于a:hover之后
+### css列表
+css列表属性允许你放置、改变列表项标志，或者将图像作为列表项标志。
+#### 列表类型
+如，在一个无序列表中，列表项的标记是出现在各列表项旁边的圆点。在有序列表中，标志可能是字母、数字或另外某种计数体系中的一个符号
+要修改用于列表项的标志类型，可以使用list-style-type:
+```css
+  ul {list-style-type: square}
+```
+列表项图像list-style-image:
+```css
+  ul li {list-style-image: url('/images/logo.jpg')}
+```
+列表标志位置list-style-position
+可以将以上3个列表样式属性合并为一个方便的属性：list-style
+```css
+  li {list-style: url('logo.jpg') square inside}
+```
+### CSS表格
+#### 表格边框
+```css
+  table,th,td {
+    border: 1px solid blue;
+  }
+```
+折叠边框border-collapse: 是否表格边框折叠为单一边框
+```css
+  table {
+    border-collapse: collapse;
+  }
+  table,th,td {
+    border: 1px solid black;
+  }
+```
+| 属性 | 描述 |
+| border-collapse | 设置是否把表格边框合并为单一的边框 |
+| border-spacing | 设置分割单元格边框的距离 |
+| caption-side | 设置表格标题的位置 |
+| empty-cells | 设置是否显示表格中的空单元格 |
+| tablye-layout | 设置显示单元、行和列的算法 |
+### css轮廓
+轮廓是绘制于元素周围的一条线，位于边框边缘的外围，可起到突出元素的作用。css outline属性规定元素轮廓的样式、颜色和宽度
+| 属性 | 描述 |
+| outline | 在一个声明中设置所有的轮廓属性 |
+| outline-color | 设置轮廓的颜色 |
+| outline-style | 设置轮廓的样式 |
+| outline-width | 设置轮廓的宽度 |
+## css框模型
+### css框模型概述
+css框模型(Box Model)规定了元素框处理元素内容、内边距、边距和外边距的方式
+#### 图解
+![](http://www.w3school.com.cn/i/ct_boxmodel.gif)
+提示：背景应用于由内容和内边距、边框组成的区域。
+在css中，width和height指的是内容区域的宽度和高度。增加内边距、边框和外边距不会影响内容区域的尺寸但是会增加元素框的总尺寸
+
+
+
+
+
+
+
+
 
 
 
