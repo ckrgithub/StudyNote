@@ -621,11 +621,21 @@ border-top-style,border-right-style,border-bottom-style,border-left-style
   或简写为(值复制)
   p {border-style: solid; border-width: 15px 5px;}
 ```
-
-
-
-
-
+### css margin属性
+margin属性可以接受任何长度单位，可以是像素、英寸、毫米或em
+```css
+  h1 {margin: 0.25in}
+  h2 {margin: 10px 0px 15px 5px}
+  h3 {margin: 10%}
+```
+单边外边距属性：margin-top,margin-right,margin-bottom,margin-left
+### css 外边距合并
+外边距合并指的是，当两个垂直外边距相遇时，它们将形成一个外边距。合并后的外边距的高度等于两个发生合并的外边距
+的高度中的较大者
+当一个元素出现在另一个元素上面时，第一个元素的下外边距与第二个元素上外边距会发生合并。如图：
+![](http://www.w3school.com.cn/i/ct_css_margin_collapsing_example_1.gif)
+当一个元素包含在另一个元素中时(假设没有内边距或边框把外边距分隔开)，它们上/下外边距会发生合并，如图：
+![](http://www.w3school.com.cn/i/ct_css_margin_collapsing_example_2.gif)
 
 
 
