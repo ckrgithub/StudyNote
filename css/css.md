@@ -565,6 +565,62 @@ css框模型(Box Model)规定了元素框处理元素内容、内边距、边距
 
 提示：背景应用于由内容和内边距、边框组成的区域。
 在css中，width和height指的是内容区域的宽度和高度。增加内边距、边框和外边距不会影响内容区域的尺寸但是会增加元素框的总尺寸
+#### css内边距
+css padding属性定义元素边框与元素内容之间的空白区域
+* padding: 接受长度值或百分比值，但不允许使用负值。
+```css
+  <!--h1元素各边都有10像素的内边距-->
+  h1 {padding: 10px;}
+  <!--可以按照上、右、下、左的顺序分别设置各边的内边距-->
+  h1 {padding: 10px 0.25em 2ex 20%}
+```
+* 单边内边距属性
+```css
+  h1 {
+    padding-top: 10px;
+    padding-right: 0.25em;
+    padding-bottom: 2ex;
+    padding-left: 20%;
+  }
+```
+### css边框
+css border属性允许你规定元素边框的样式、宽度和颜色
+#### 边框样式
+border-style属性定义了10个不同的非inherit样式，包括none
+|值|描述|
+|--|---|
+|none|定义无边框|
+|hidden|与"none"相同。不过应用于表时除外，对于表，hidden用于解决边框冲突|
+|dotted|定义点状边框|
+|dashed|定义虚线|
+|solid|定义实线|
+|double|定义双线|
+|groove|定义3D凹槽边框。其效果取决于border-color的值|
+|ridge|定义3D垄状边框。其效果取决于border-color的值|
+|inset|定义3D inset边框。其效果取决于border-color的值|
+|outset|定义3D outset边框。其效果取决于border-color的值|
+|inherit|规定应该从父元素继承边框样式|
+
+```css
+  p.aside {border-style: solid dotted dashed double;}
+```
+上面，类名为aside定义了四种边框样式：实线上边框、点线右边框、虚线下边框和双线左边框
+#### 定义单边样式
+border-top-style,border-right-style,border-bottom-style,border-left-style
+```css
+  p {border-style: solid solid solid none;}
+  <!--等价于-->
+  p {border-style: solid;border-left-style: none;}
+```
+注意：如果使用第二种方法，必须把单边属性放在简写属性之后。
+#### 边框的宽度
+为边框指定宽度有两种方法：可以指定长度值，如2px或0.1em；或使用3个关键字之一，如：thin、medium、thick
+注释：css没有定义3个关键字的具体宽度。
+```css
+  p {border-style: solid; border-width: 15px 5px 15px 5px;}
+  或简写为(值复制)
+  p {border-style: solid; border-width: 15px 5px;}
+```
 
 
 
