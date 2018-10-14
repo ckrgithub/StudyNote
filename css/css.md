@@ -651,16 +651,16 @@ div、h1或p元素常常被称为块级元素。这意味着这些元素显示�
 |inline-block|行内块元素(css2.1 新增)|
 |list-item|此元素会作为列表显示|
 |run-in|此元素会根据上下文作为块级元素或内联元素显示|
-|css-table|此元素会作为块级表格来显示(类似<table>),表格前后带有换行符|
-|css-inline-table|此元素会作为内联表格来显示(类似<table>),表格前后没有换行符|
-|table-row-group|此元素会作为一个或多个行的分组来显示(类似<tbody>)|
-|table-header-group|此元素会作为一个或多个行的分组来显示(类似<thead>)|
-|table-footer-group|此元素会作为一个或多个行的分组来显示(类似<tfoot>)|
-|table-row|此元素会作为一个表格行显示(类似<tr>)|
-|table-column-group|此元素会作为一个或多个列的分组来显示(类似<colgroup>)|
-|table-column|此元素会作为一个单元格列显示(类似<col>)|
-|table-cell|此元素会作为一个表格单元格显示(类似<td>和<th>)|
-|table-caption|此元素会作为一个表格标题显示(类似<caption>)|
+|css: table|此元素会作为块级表格来显示(类似<table>),表格前后带有换行符|
+|css: inline-table|此元素会作为内联表格来显示(类似<table>),表格前后没有换行符|
+|css: table-row-group|此元素会作为一个或多个行的分组来显示(类似<tbody>)|
+|css: table-header-group|此元素会作为一个或多个行的分组来显示(类似<thead>)|
+|css: table-footer-group|此元素会作为一个或多个行的分组来显示(类似<tfoot>)|
+|css: table-row|此元素会作为一个表格行显示(类似<tr>)|
+|css: table-column-group|此元素会作为一个或多个列的分组来显示(类似<colgroup>)|
+|css: table-column|此元素会作为一个单元格列显示(类似<col>)|
+|css: table-cell|此元素会作为一个表格单元格显示(类似<td>和<th>)|
+|css: table-caption|此元素会作为一个表格标题显示(类似<caption>)|
 |inherit|规定应该从父元素继承display属性的值|
   
 #### 2.css定位机制
