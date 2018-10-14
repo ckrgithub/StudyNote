@@ -651,8 +651,8 @@ div、h1或p元素常常被称为块级元素。这意味着这些元素显示�
 |inline-block|行内块元素(css2.1 新增)|
 |list-item|此元素会作为列表显示|
 |run-in|此元素会根据上下文作为块级元素或内联元素显示|
-|'table'|此元素会作为块级表格来显示(类似<table>),表格前后带有换行符|
-|'inline-table'|此元素会作为内联表格来显示(类似<table>),表格前后没有换行符|
+|css-table|此元素会作为块级表格来显示(类似<table>),表格前后带有换行符|
+|css-inline-table|此元素会作为内联表格来显示(类似<table>),表格前后没有换行符|
 |table-row-group|此元素会作为一个或多个行的分组来显示(类似<tbody>)|
 |table-header-group|此元素会作为一个或多个行的分组来显示(类似<thead>)|
 |table-footer-group|此元素会作为一个或多个行的分组来显示(类似<tfoot>)|
