@@ -31,6 +31,7 @@ alt+f7：查找当前选中的类、方法、字段、参数和语句被引用�
 * 所有字符必须是字母、数字或下划线
 #### 3.添加依赖
 * 图片
+
 | gradle 3.0 | gradle 2.0 |
 | ---------- | ---------- |
 | ![](../img/gradle3.0.png) | ![](../img/gradle2.0.png) |
@@ -189,9 +190,20 @@ android {
 ```
 #### 8.分析apk
 * Build > Analyze APK
-
-
-
+#### 9.命令行
+* gradlew task-name: gradlew assembleDebug/gradlew installDebug
+# 三、apk调试
+## logcat
+![](https://developer.android.google.cn/studio/images/debug/logcat_2x.png)
+1.clear logcat: 清除log
+2.scroll to the end: 点击跳到log底部
+3.up/down the stack trace: 导航日志中的堆栈，选择打印异常总的后续的文件名
+4.use soft wraps: 启用换行并防止水平滚动
+5.print: 打印log信息
+6.restart: 清除log并重新展示log
+7.logcat header: 弹出locat header对话框
+8.screens capture: 截屏
+9.screen record: 录屏
 
 # 感谢
 [android官网](https://developer.android.google.cn/studio/build)
