@@ -242,8 +242,7 @@ $ adb shell monkey [options] <event-count>
 |--pct-trackball <percent>|调整轨迹事件百分比|
 |--pct-nav <percent>|调整键盘式的导航事件百分比|
 ## 性能调试
-![](https://developer.android.google.cn/studio/profile/android-profiler)
-![](https://developer.android.google.cn/studio/profile/memory-profiler)
+![](https://developer.android.google.cn/studio/images/profile/android-profiler-callouts_2x.png)
 
 
 
