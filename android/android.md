@@ -204,6 +204,63 @@ android {
 7.logcat header: 弹出locat header对话框
 8.screens capture: 截屏
 9.screen record: 录屏
+## 搜索日志信息
+* 启用正则表达式搜索：Regex
+* 在搜索框里键入一个字符
+* 在搜索框里按下enter键来保存该搜索字符
+## 日志过滤
+过滤菜单中，有show only selected application,no filters,edit filter configuration
+## 垃圾回收原因
+* GC_concurrent: 当堆开始占满时释放内存的并发gc
+* GC_for_malloc: 试图在堆已占满时分配内存
+* GC_hprof_dump_heap: 当请求一个hprof格式的文件以分析堆时发生gc
+* GC_explicit: 当调用gc()时
+* GC_external_alloc: 
+## 打开堆栈
+Analyze->Analyze stacktrace
+## 布局检查器
+Tools>Layout Inspector
+# 测试
+## 添加测试
+* 打开你要测试的java文件
+* ctrl+shift+t: 创建你想要测试的方法和类
+## UI测试
+使用Espresso Test Recorder
+## Monkey
+$ adb shell monkey [options] <event-count>
+```adb
+  $ adb shell monkey -p com.ckr.test -v 500 //启动app并发送500个随机事件
+```
+|option|描述|
+|---|---|
+|--help|使用指南|
+|-v|无|
+|-s <seed>|伪随机生成器的seed值|
+|--throttle <milliseconds>|事件之间插入固定延时|
+|--pct-touch <percent>|调整触摸事件的百分比|
+|--pct-motion <percent>|调整移动事件的百分比|
+|--pct-trackball <percent>|调整轨迹事件百分比|
+|--pct-nav <percent>|调整键盘式的导航事件百分比|
+## 性能调试
+![](https://developer.android.google.cn/studio/profile/android-profiler)
+![](https://developer.android.google.cn/studio/profile/memory-profiler)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # 感谢
 [android官网](https://developer.android.google.cn/studio/build)
