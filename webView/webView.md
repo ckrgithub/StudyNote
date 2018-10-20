@@ -39,8 +39,12 @@ webView加载页面的方式：
 ```
 # RN
 [react native运行原理解析](https://blog.csdn.net/xiangzhihong8/article/details/52623852)
-
-
+# git子模块
+[git子模块](https://juejin.im/post/5a586ee7f265da3e4e25910f)
+[混合](https://blog.csdn.net/zhaikun68/article/details/77770603)
+[hybrid](https://www.cnblogs.com/dailc/p/5930238.html)
+[cordova](https://codeburst.io/why-and-when-cordova-is-better-then-react-native-2519852ae06a)
+[cordova](https://developer.ibm.com/dwblog/2017/what-is-apache-cordova-cross-platform-mobile-application-development/)
 
 
 
