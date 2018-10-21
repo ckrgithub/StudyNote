@@ -59,28 +59,22 @@ webView加载页面的方式：
 * 预加载数据：在初始化webView同时，开始网络请求页面所需的数据
 * 离线包：将h5的页面和资源进行打包后下发到客户端，并由客户端解压到本地存储。但更新机制复杂化
 
-
-
-
-
 # RN
 [react native运行原理解析](https://blog.csdn.net/xiangzhihong8/article/details/52623852)
-# git子模块
-[git子模块](https://juejin.im/post/5a586ee7f265da3e4e25910f)
-[混合](https://blog.csdn.net/zhaikun68/article/details/77770603)
-[hybrid](https://www.cnblogs.com/dailc/p/5930238.html)
-[cordova](https://codeburst.io/why-and-when-cordova-is-better-then-react-native-2519852ae06a)
-[cordova](https://developer.ibm.com/dwblog/2017/what-is-apache-cordova-cross-platform-mobile-application-development/)
 
 # 解决方案
+[腾讯VasSonic](https://mp.weixin.qq.com/s?__biz=MzA3NTYzODYzMg==&mid=2653579269&idx=2&sn=bb9822d2cd9b0dc79134bd9990220571&chksm=84b3ba02b3c43314aeb54375f3e729fcef5495ab39a64c94719e218f28caa1fc4dde50f7c92d&mpshare=1&scene=23&srcid=0825CYa3KqzW532zZLQwVnnH%23rd)
 [webView性能优化](https://tech.meituan.com/WebViewPerf.html)
-[h5秒开方案](https://juejin.im/post/5b94ca52e51d450e7d097f38)
-[秒开方案](https://mp.weixin.qq.com/s?__biz=MzA3NTYzODYzMg==&mid=2653579803&idx=1&sn=0a1f418f628a53e9262b97879f47593b&chksm=84b3b81cb3c4310a175b95264bf74a5be8abf39751ed0b21a353e68e6cf1846db11995bc2fec&mpshare=1&scene=23&srcid=08258x6omkd9AHgWWz81G80B%23rd)
-[秒开](https://mp.weixin.qq.com/s?__biz=MzA3NTYzODYzMg==&mid=2653579269&idx=1&sn=e3074cf75b824622bf96a2a488066e88&chksm=84b3ba02b3c43314f47db7c685de13089e1f61d9246211b27657c0649f6e7f2a3f53b22cc801&mpshare=1&scene=23&srcid=0825SymzNBsExO1hDt6YXpHA%23rd)
+[页面框架优化参考点](https://stevesouders.com/hpws/rules.php)
+[h5秒开方案实现](https://juejin.im/post/5b94ca52e51d450e7d097f38)
+[H5秒开方案探索](https://mp.weixin.qq.com/s?__biz=MzA3NTYzODYzMg==&mid=2653579803&idx=1&sn=0a1f418f628a53e9262b97879f47593b&chksm=84b3b81cb3c4310a175b95264bf74a5be8abf39751ed0b21a353e68e6cf1846db11995bc2fec&mpshare=1&scene=23&srcid=08258x6omkd9AHgWWz81G80B%23rd)
+[首屏秒开优化方案探讨](https://mp.weixin.qq.com/s?__biz=MzA3NTYzODYzMg==&mid=2653579269&idx=1&sn=e3074cf75b824622bf96a2a488066e88&chksm=84b3ba02b3c43314f47db7c685de13089e1f61d9246211b27657c0649f6e7f2a3f53b22cc801&mpshare=1&scene=23&srcid=0825SymzNBsExO1hDt6YXpHA%23rd)
 [大众点评hybrid化建设](https://mp.weixin.qq.com/s?__biz=MzA3NTYzODYzMg==&mid=2653578296&idx=2&sn=03cc579cb7e016f8bfd4ba994b0a5947&chksm=84b3b63fb3c43f2956acad4f8d1c0a4d01e3692c829cca4fa0ad94fc554d7fe33e18db8e2d4c&mpshare=1&scene=23&srcid=08252SpCDqB2HymHiVSXA4eu%23rd)
 [如何让webView访问更快](https://my.oschina.net/yale8848/blog/1544298)
 [构建WebView缓存机制&资源加载方案](https://www.jianshu.com/p/5e7075f4875f)
-[VasSonic](https://mp.weixin.qq.com/s?__biz=MzA3NTYzODYzMg==&mid=2653579269&idx=2&sn=bb9822d2cd9b0dc79134bd9990220571&chksm=84b3ba02b3c43314aeb54375f3e729fcef5495ab39a64c94719e218f28caa1fc4dde50f7c92d&mpshare=1&scene=23&srcid=0825CYa3KqzW532zZLQwVnnH%23rd)
+
+
+[Native、Hybrid、RN、Web App对比](https://www.cnblogs.com/dailc/p/5930238.html)
 
 
 
