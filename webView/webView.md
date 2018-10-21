@@ -76,12 +76,107 @@ webView加载页面的方式：
 [VasSonic wiki](https://github.com/Tencent/VasSonic/wiki)  
 [Native、Hybrid、RN、Web App对比](https://www.cnblogs.com/dailc/p/5930238.html)
 
+# VasSonic
+一个轻量级的高性能的Hybrid框架，专注于提升页面`首屏加载速度`，完美支持静态直出和动态直出页面，兼容离线包等方案。
+该框架使用终端应用层原生传输通道取代系统浏览器内核自身资源传输通道来请求页面主资源，在移动终端初始化的同时`并行请求`页面主资源并做到`流式拦截`，
+减少传统方案上终端初始化耗时长导致页面主资源发起请求时机慢或传统并行方案下必须等待主资源完成下载才能交给内核加载的影响。
+另外通过`客户端和服务端双方遵守VasSonic格式规范`(通过在html内增加注释代码区分模板和数据)，该框架做到智能地对页面内容进行`动态缓存`和
+`增量更新`，减少对网络的依赖和数据传输的大小，大大提升h5页面加载速度。
+## 页面规范约定
+sonic将页面分割为不经常变化的`模板(template)和经常变化的数据块(data)`。页面将整个html通过VasSonic标签进行划分，包裹在标签中的内容为data，
+标签外的内容为模板。
+* VasSonic标签：
+```html
+<!-- sonicdiff-moduleName --> xxx <!-- sonicdiff-moduleName-end -->
+```
+上面整个模块称为一个数据块，moduleName表示数据块的tag，xxx是该tag对应的数据块的内容。如：
+```html
+  <html>
+  <div id="data1">
+    <!--sonicdiff-data1-->
+    <p> id="partialRefresh">数据块1</p>
+    <!--sonicdiff-data1-end-->
+  </div>
+  <div id="data2">
+    <!--sonicdiff-data2-->
+    <p id="data2">数据块2</p>
+    <!--sonicdiff-data2-end-->
+  </dive>
+  </html>
+```
+将数据块抽离之后，通过数据块的tag进行占位，最终成为模板：
+```html
+  <html>
+  <div id="data1">
+    {data1}
+  </div>
+  <div id="data2">
+    {data2}
+  </div>
+  </html>
+```
+## 请求规范约定
+VasSonic为了支持区分客户端是否支持增量更新等功能，对头部字段进行了扩展
+|字段|说明|请求头(y/n)|响应头(y/n)|
+|---|---|---|---|
+|accept-diff|表示终端是否支持VasSonic模式，true为支持，否则不支持|yes|no|
+|If-noen-match|本地缓存的etag，给服务端判断是否命中304|yes|no|
+|etag|页面内容的唯一标识(hash值)|no|yes|
+|template-tag|模板唯一标识(hash值)，客户端使用本地校验或服务端使用判断是否模板有变更|no|yes|
+|template-change|标记模板是否变更，客户端使用|no|yes|
+|cache-offline|客户端使用，根据不同类型进行不同行为|no|yes|
 
+* cache-offline字段说明
+|字段|说明|
+|---|---|
+|true|缓存到磁盘并展示返回内容|
+|false|展示返回内容，无需缓存到磁盘|
+|store|缓存到磁盘，如果已经加载缓存，则下次加载，否则展示返回内容|
+|http|容灾字段，如果http表示终端6小时之内不会采用sonic请求该url|
+## 模式介绍
+|模式|说明|条件|
+|---|---|---|
+|首次加载|本地没有缓存，即第一次加载页面|etag为空值或template_tag为空值|
+|完全缓存|本地有缓存，且缓存内容跟服务器内容完全一样|etag一致|
+|数据更新|本地有缓存，本地模板内容跟服务器模板内容一样，但数据块有变化|etag不一致且template_tag一致|
+|模板更新|本地有缓存，缓存的模板内容跟服务器的模板内容不一样|etag不一致且template_tag不一致|
 
+## 动态缓存
+客户端第一次加载符合VasSonic规范的页面后，延迟几秒后，会将页面抽离成模板和数据并保存到本地。此时终端缓存目录下，
+该页面将对应三个缓存文件xxx.html、xxx.template、xxx.data，其中xxx是该页面唯一标识(即sonicSessionId)。
+对于非首次加载场景，VasSonic优先加载本地缓存，终端请求并计算差异数据块，最终通知页面刷新变化元素即可完成增量更新。
+主要涉及两个问题：如何获取差异数据以及如何局部刷新。
+* 获取数据：数据更新模式下，后台会在响应头部返回template-change=false等字段，同时响应包体返回的内容不再是完整的html,
+而是全部的数据块。此时客户端通过将本地数据块和服务器返回的数据块进行diff对比，可以得到变化的数据块
+* 局部刷新
+得到数据块后，客户端只需通知页面设置的回调接口(getDiffDataCallback)进行界面元素更新即可。这里是javascript通信方式，
+也可以自由定义(使用webView标准的javaScript通信方式或使用伪协议的方式)。页面收到终端的返回数据根据返回数据中的code字
+段判断当前sonic模式。
+## 首次加载秒开
+VasSonic缓存更新等逻辑可以脱离webView执行，因此VasSonic可以随时进行预加载。
+场景
+* 重要的活动页面预埋，可以通过后台push方式提前预加载
+* 预测用户的打开页面行为，提前对预测页面进行预加载
+### 页面唯一标识：sessionId
+通过sessionId来唯一标识一个url。默认拼接规则：
+```
+sessionId=[user_account_id+"_"]+MD5(URL.authority+URL.path+URL.sonic_remain_params);
+```
+|字段|说明|
+|---|---|
+|user_account_id|当前用户的账号，可选值，由SonicSessionConfig.isAccountRelated决定|
+|MD5|MD5函数|
+|URL.authority|当前url域名的认证机构，一般为null|
+|URL.sonic_remian_params|当前URL的sonic保留字段，sonic_前缀或者sonic_remain_params=xxx|
 
-
-
-
+```
+  user_account_id="kid";
+  url="http://xxx.yyy.com/app/index.html?id=2&type=1&sonic_remain_params=id";
+  sessionId="[kid_]"+MD5["xxx.yyy.com/app/index.html"+"id=2"]
+```
+注意：在VasSonic框架中，相同sessionId对应的SonicSession仅能同时存在一个，主要出于两个原因考虑：
+1.如果同时运行多个相关的SonicSession的话，会导致缓存管理复杂化，且容易出现相互覆盖问题  
+2.如果出现同时打开同一个url，将url回退为标准webView流程执行即可
 
 
 
