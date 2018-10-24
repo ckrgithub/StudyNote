@@ -678,19 +678,93 @@ css有三种基本的定位机制：普通流、浮动和绝对定位。
 * relative: 元素框偏移某个距离
 * absolute: 元素框从文档流完全删除，并相对于其包含块定位。包含块可能是文档中的另一个元素或者时初始包含块。
 * fixed: 元素框的表现类似absolute，不过其包含块是视窗本身。
-
-
-
-
-
-
-
-
-
-
-
-
-
+#### 相对定位
+如果对一个元素进行相对定位，它将出现在它所在的位置上
+```css
+  #box_relative{
+    position: relative;
+    left: 30px;
+    top: 30px;
+  }
+```
+注意，在使用相对定位时，无论是否进行移动，元素任然占据原来的空间。因此，移动元素会导致它覆盖其他框。
+#### 绝对定位
+绝对定位使元素的位置与文档流无关，因此不占据空间。
+```css
+  #box_relative {
+    position: absolute;
+    left: 30px;
+    top: 20px;
+  }
+```
+相对定位是"相对于"元素在文档中的初始位置，而绝对定位是"相对于"最近的已定位祖先元素。
+#### 浮动
+浮动框可以向左或向右移动，直到它的外边缘碰到包含框或另一个浮动框的边框为止。由于浮动框不在文档的普通流中，所以文档的普通流中的块框表现得就像
+浮动框不存在一样。
+![](http://www.w3school.com.cn/i/ct_css_positioning_floating_right_example.gif)  
+![](http://www.w3school.com.cn/i/ct_css_positioning_floating_left_example.gif)  
+![](http://www.w3school.com.cn/i/ct_css_positioning_floating_left_example_2.gif)
+float属性实现元素的浮动。行框和清理
+浮动框旁边的行框被缩短，从而给浮动框留出空间，行框围绕浮动框。
+![](http://www.w3school.com.cn/i/ct_css_positioning_floating_linebox.gif)  
+要阻止行框围绕浮动框，需要对该框应用clear属性。clear属性值是left、right、both或none，它表示框的哪些边不应该挨着浮动框。
+![](http://www.w3school.com.cn/i/ct_css_positioning_floating_clear.gif)
+## css选择器
+### 1.元素选择器
+文档的元素就是最基本的选择器。如果设置html样式，选择器通常将是某个html元素，比如p、h1、em、a,甚至可以是html本身：
+```css
+  html {color: black;}
+  h1 {color: blue;}
+  h2 {color: silver;}
+```
+#### 2.类型选择器
+元素选择器又称为类型选择器。"类型选择器匹配文档语言元素类型的名称。类型选择器匹配文档树中该元素类型的每一个实例。"
+```xml
+  <?xml version="1.0" encoding="UTF-8">
+  <?xml-stylesheet type="text/css" href="note.css"?>
+  <note>
+  <to>George</to>
+  <from>John</from>
+  <heading>Reminder</heading>
+  <body>do not forget the meeting</body>
+  </note>
+```
+```css
+  note {
+    font-family: Verdana, Arial;
+    margin-left: 30px;
+  }
+  to {
+    font-size: 28px;
+    display: block;
+  }
+  from {
+    font-size: 28px;
+    display: block;
+  }
+  heading{
+    color: red;
+    font-size: 60px;
+    display: block;
+  }
+  body {
+    color: blue;
+    font-size: 35px;
+    display: block;
+  }
+```
+### 3.选择分组
+```css
+  h2,p{color:gray;}
+```
+将h2和p选择器放在规则左边，然后用逗号分隔，就定义了一个规则。
+声明分组：
+```css
+  h1,h4{color: silver; background:white;}
+  h2 {color: silver;}
+  h3 {color: white;}
+  h2,h3{background:gray;}
+```
 
 
 
