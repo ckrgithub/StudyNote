@@ -260,7 +260,7 @@ read_sync_stats,receive_boot_completed,reorder_tasks,request_companion_run_in_ba
 request_delete_packages,request_ignore_battery_optimizations,set_alarm,set_wallpaper,set_wallpaper_hints,transmit_ir,use_fingerprint,
 vibrate,wake_lock,write_sync_settings
 * 签名权限
-* 危险权限：
+* 危险权限：  
 |权限组|权限|
 |---|---|
 |calendar|read_calendar,write_calendar|
