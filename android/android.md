@@ -244,12 +244,36 @@ $ adb shell monkey [options] <event-count>
 ## 性能调试
 ![](https://developer.android.google.cn/studio/images/profile/android-profiler-callouts_2x.png)
 
-
-
-
-
-
-
+# 权限
+如果设备运行的是android 6.0及以上版本，在安装的时候，用户不会被通知任何的权限。所以，在运行时，你的app必须要求用户授权危险的权限。
+如果用户拒接了权限请求后，你app再次请求权限时，弹框会包含Never ask again的勾选框。如果用户勾选了不再提示框，系统不会再提示用户授权。
+## 可选的硬件特性权限
+```java
+  //相机不是必须的特性，App可以在没有相机的设备上安装
+  <uses-feature android:name="android.hardware.camera" android:required="false">
+```
+注意，你必须通过PackageManager.hasSystemFeature()来检查设备是否有这个camera特性。
+## 权限分类
+* 普通权限：access_location_extra_commands,access_network_state,access_notification_policy,access_wifi_state,bluetooth,bluetooth_admin,
+broadcast_sticky,change_network_state,change_wifi_multicast_state,change_wifi_state,disable_keyguard,expand_status_bar,foreground_service,get_package_size,install_shortcut,internet,kill_background_processes,manage_own_calls,modify_audio_settings,nfc,read_sync_settings,
+read_sync_stats,receive_boot_completed,reorder_tasks,request_companion_run_in_background,request_companion_use_data_in_background,
+request_delete_packages,request_ignore_battery_optimizations,set_alarm,set_wallpaper,set_wallpaper_hints,transmit_ir,use_fingerprint,
+vibrate,wake_lock,write_sync_settings
+* 签名权限
+* 危险权限：
+|权限组|权限|
+|---|---|
+|calendar|read_calendar,write_calendar|
+|call_log|read_call_log,write_call_log,process_outgoing_calls|
+|camera|camera|
+|contacts|read_contacts,write_contacts,get_accounts|
+|location|access_fine_location,access_coarse_location|
+|microphone|record_audio|
+|phone|read_phone_state,read_phone_numbers,call_phone,answer_phone_calls,add_voicemail,use_sip|
+|sensors|body_sensors|
+|sms|send_sms,receive_sms,read_sms,receive_wap_push,receive_mms|
+|storage|read_external_storage,write_external_storage|  
+* 特殊权限：system_alert_window,write_settings
 
 
 
