@@ -261,6 +261,7 @@ request_delete_packages,request_ignore_battery_optimizations,set_alarm,set_wallp
 vibrate,wake_lock,write_sync_settings
 * 签名权限
 * 危险权限：  
+
 |权限组|权限|
 |---|---|
 |calendar|read_calendar,write_calendar|
