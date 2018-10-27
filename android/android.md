@@ -275,7 +275,29 @@ vibrate,wake_lock,write_sync_settings
 |sms|send_sms,receive_sms,read_sms,receive_wap_push,receive_mms|
 |storage|read_external_storage,write_external_storage|  
 * 特殊权限：system_alert_window,write_settings
-
+## 权限请求
+* 是否已有权限：ContextCompat.checkSelfPermission()
+```java
+  if(ContextCompat.checkSelfPermission(activity,Manifest.permission.WRITE_CALENDAR)!=PackageManager.PERMISSION_GRANTED){
+  }
+```
+* 请求权限：requestPermissions()
+```java
+  ActivityCompat.requestPermissions(activity,Manifest.permission.WRITE_CALENDAR,0)
+```
+* 处理权限请求结果：
+```java
+  @Override
+  public void onRequestPermissionsResult(int requestCode,String permissions[],int[] grantResults){
+    switch(requestCode){
+      case 0:
+        if(grantResults.length > 0 && grantResults[0]==PackageManager.PERMISSION_GRANTED){
+          
+        }
+        break;
+    }
+  }
+```
 
 
 
