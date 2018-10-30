@@ -1,6 +1,7 @@
 # Tinker
 Tinker是一个支持不需要重新安装apk情况下进行dex、库和资源更新的andriod热修复解决方案库。
-## 添加插件依赖
+## 使用指南
+### 添加插件依赖
 ```groovy
   buildscript {
     dependencies {
@@ -9,7 +10,7 @@ Tinker是一个支持不需要重新安装apk情况下进行dex、库和资源�
   }
 ```
 注意：自tinker-support 1.0.3版本起无需再配置tinker插件的classpath
-## 集成sdk
+### 集成sdk
 ```groovy
   apply plugin: 'tinker-support.gradle'
   android {
@@ -106,7 +107,7 @@ tinker-support.gradle文件：
 |sevenZip||7zip路径配置项，执行前提是useSign为true|
 |zipArtifact|null|将自动根据机器属性获得对应7za运行文件|
 
-## 自定义Application
+### 自定义Application
 ```java
   public class CkrApp extends TinkerApplication {
     public CkrApp(){
@@ -149,7 +150,7 @@ tinker-support.gradle文件：
     }
  }
 ```
-## AndroidManifest.xml配置
+### AndroidManifest.xml配置
 ```xml
   <uses-permission android:name="android.permission.READ_PHONE_STATE" />
   <uses-permission android:name="android.permission.INTERNET" />
@@ -175,7 +176,7 @@ tinker-support.gradle文件：
         tools:replace="name,resource"/>
   </provider>
 ```
-## 混淆配置
+### 混淆配置
 ```java
   -dontwarn com.tencent.bugly.**
   -keep public class com.tencent.bugly.**{*;}
@@ -183,10 +184,43 @@ tinker-support.gradle文件：
   -dontwarn com.tencent.tinker.**
   -keep class com.tencent.tinker.** { *; }
 ```
+# 使用指南
+## 完整接入流程
+* 打基准包安装并上报联网(注：填写唯一的tinkerId)
+* 对基准包的bug修复(可以java代码变更或资源变更)
+* 修改基准包路径、修改补丁包tinkerId、mapping文件路径(如果开启混淆需要配置)、resId文件路径
+* 执行buildTinkerPatchRelease打Release版本补丁包
+* 选择app/build/outputs/patch目录下的补丁包并上传(注：不要选择tinkerPatch目录下的补丁包，不然上传会有问题)
+* 编辑下发补丁规则，点击立即下发
+* 杀死进程并重启基准包，请求补丁策略(sdk会自动下载补丁并合成)
+* 再次重启基准包，校验补丁应用结果
+* 查看页面，查看激活数据的变化
 
+## 编译基准包
+* 1.配置
+![](https://bugly.qq.com/docs/img/hotfix/android/Snip20170113_3.png?v=20181014122344)
 
+强调：基线版本配置一个唯一的tinkerId,而这个基线版本能够应用补丁的前提是集成过热更新sdk,并启动上报过联网，这样我们后台将会这个tinkerId对应到一个目标版本，如：thinkId="bugly_1.0.0"对应一个目标版本是1.0.0，基于这个版本打的补丁包就能匹配到目标版本。
+* 2.编译基准包
+![](https://bugly.qq.com/docs/img/hotfix/android/Snip20170113_4.png?v=20181014122344)
 
+build/outputs/bakApk路径下生成每次编译基准包、混淆配置文件、资源id文件，如：
+![](https://bugly.qq.com/docs/img/hotfix/android/Snip20170209_2.png?v=20181014122344)
 
+实际应用中，请注意保存线上发布版本的基准apk包、mapping文件、R.txt文件，如果线上版本有bug，就可以借助我们tinker-support插件进行补丁包的生成。
+我们每次冷启动都会请求补丁策略，会上报当前版本号和tinkerId,这样我们后台就能将这个唯一的tinkerId对应到一个版本。
+## 根据基线版本生成补丁包
+![](https://bugly.qq.com/docs/img/hotfix/android/Snip20170113_12.png?v=20181014122344)
+
+执行构建补丁包：
+![](https://bugly.qq.com/docs/img/hotfix/android/Snip20170209_4.png?v=20181014122344)
+
+补丁版本怎么匹配目标版本，可以双击patch包
+![](https://bugly.qq.com/docs/img/hotfix/android/Snip20161215_54.png?v=20181014122344)  
+![]()
+
+## 上传补丁包到平台
+![](https://bugly.qq.com/docs/img/hotfix/android/1479199765798.png?v=20181014122344)
 
 
 
