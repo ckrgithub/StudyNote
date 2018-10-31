@@ -222,6 +222,8 @@ build/outputs/bakApk路径下生成每次编译基准包、混淆配置文件、
 ## 上传补丁包到平台
 ![](https://bugly.qq.com/docs/img/hotfix/android/1479199765798.png?v=20181014122344)
 
-
+# 常见问题
+* Error:com.tencent.tinker.build.util.TinkerPatchException: all loader classes don't appear in old primary dex.
+答：crashreport_upgrade、tinker-andriod-anno、tinker-support的版本不一致
 
 
