@@ -765,6 +765,66 @@ float属性实现元素的浮动。行框和清理
   h3 {color: white;}
   h2,h3{background:gray;}
 ```
+### 4.类选择器详解
+类选择器允许以一种独立于文档元素的方式来指定样式
+* 修改html代码：在使用类选择器之前，需要修改具体的文档标记，以便类选择器正常工作。
+为了将类选择器的样式与元素关联，必须将class指定为一个适当的值。
+```html
+  .important {color:red;}
+  <h1 class="important">
+    This heading is very important.
+  </h1>
+```
+* 结合元素选择器：
+```html
+  p.important {color:red;}
+```
+选择器现在会匹配class属性包含important的所有p元素，但其他任何类型的元素都不匹配，无论是否有此class属性
+* 多类选择器：在html中，一个class值中可能包含一个词列表，各个词之间用空格分隔。
+```html
+  .important {font-weight:bold;}// 粗体
+  .warning {font-style:italic;}// 斜体
+  .important.warning {background:silver;}// 银色背景
+  <p class="important warning"> //效果：粗体、斜体和银色背景
+  This paragraph is a very important warning.
+  </p>
+```
+### 5.id选择器详解
+id选择器允许以一种独立于文档元素的方式来指定样式.在一个html文档中，id选择器会使用一次，且仅一次
+```html
+  #intro {font-weight:bold;}
+  <p id="intro"> this is a paragraph of introduction.</p>
+```
+#### 6.属性选择器详解
+属性选择器可以根据元素的属性及属性值来选择元素
+```html
+  *[title] {color:red;}
+  a[href] {color:red;}
+  a[href][title] {color:red;}
+```
+### 7.后代选择器
+后代选择器可以选择作为某元素后代的元素
+```html
+  h1 em {color:red;}
+  <h1>this is a <em> important</em> heading </h1>
+```
+### 8.子元素选择器
+只能选择作为某元素子元素的元素
+```html
+  h1 > strong {color:red;}
+  <h1> this is <strong>very</strong> <strong>very</strong> important.</h1>
+```
+### 9.相邻兄弟选择器
+可选择紧接在另一个元素后的元素，且二者有相同的父元素
+```html
+  h1 + p {margin-top:50px;}
+```
+
+
+
+
+
+
 
 
 
