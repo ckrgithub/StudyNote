@@ -298,8 +298,25 @@ vibrate,wake_lock,write_sync_settings
     }
   }
 ```
-
-
+# 屏幕适配
+## 官方推荐
+### 1.使用ConstraintLayout约束布局
+### 2.避免使用固定大小
+建议使用"match_parent"和"wrap_content"属性，如：
+```xml
+  <TextView
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:text="ckr"/>
+```
+### 3.提供可选择的布局
+* 方向限定符：添加layout-land目录适配横屏布局
+* 使用宽度限定符：layout-w600dp适配宽度为600dp的屏幕
+* 使用smallest width限定符。最小宽度限定符指定是屏幕宽高中的最小的一个
+### 4.使用独立像素密度(dp)
+### 5.提供可选择的图片
+### 6.将应用图标放在mipmap目录
+### 使用矢量图形
 
 
 
