@@ -70,8 +70,44 @@
   currentActThreadMethod.setAccessible(true);
   Object currentActThread=currentActThreadMethod.invoke(null);
 ```
-拿到currentActThread之后，我们需要修改它的mInstrumentation这个字段为我们代理对象，我们先实现这个代理对象，由于
-
+拿到currentActThread之后，我们需要修改它的mInstrumentation这个字段为我们代理对象，我们先实现这个代理对象，由于JDK动态代理只支持接口，而这个
+Instrumentation是一个类，没办法，我们只能手动写静态代理类，覆盖掉原始的方法即可
+```java
+  public class EvilInstrumentation extends Instrumentation {
+    private static final String TAG = "EvilInstrumentation";
+    Instrumentation mBase;
+    public EvilInstrumentation(Instrumentation base){
+      mBase=base;
+    }
+    public ActivityResult execStartActivity(Context who,IBinder contextThread,IBinder token,Activity target,Intent intent,
+      int requestCode,Bundle options){
+      try{
+        Method execStartActivity = Instrumentation.class.getDeclaredMethod("execStartActivity",Context.class,IBinder.class,IBinder.class,Activity.class,Intent.class,
+        int.class,Bundle.class);
+        return (ActivityResult)execStartActivity.invoke(mBase,who,contextThread,token,target,intent,requestCode,options);
+      }catch(Exception e){
+        throw new RuntimeException("do not support!");
+      }
+    }
+  }
+```
+有了代理对象，就可以偷梁换柱：
+```java
+  public static void attachContext() throws Exception{
+    Class<?> actThreadClass=Class.forName("android.app.ActivityThread");
+    Method curActThreadMethod=actThreadClass.getDeclaredMethod("currentActivityThread");
+    curActThreadMethod.setAccessible(true);
+    Object curActThread=curActThreadMethod.invoke(null);
+    //拿到原始mInstrumentation字段
+    Field mInstrumentationField=actThreadClass.getDeclaredField("mInstrumentation");
+    mInstrumentationField.setAccessible(true);
+    Instrumentation mInstrumentation=(Instrumentation)mInstrumentationField.get(curActThread);
+    //创建代理对象
+    Instrumentation evilInstrumentation=new EvilInstrumentation(mInstrumentation);
+    //偷梁换柱
+    mInstrumentationField.set(curActThread,evilInstrumentation);
+  }
+```
 
 
 
