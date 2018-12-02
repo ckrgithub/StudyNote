@@ -174,6 +174,98 @@ Android系统通过Binder机制给应用程序提供了一系列的系统服务�
 通过Binder机制优先查找本地Binder对象的这个特性达到Hook掉系统服务对象。因此queryLocalInterface失去它原本的意义(只查找本地Binder对象，没有本地对象
 返回null).由于我们接管了asInterface这个方法的全部，我们伪造的系统服务对象不能只是拥有本地Binder对象的能力，还要有Binder代理对象操纵驱动的能力.
 ### Hook系统剪切板服务
+1.伪造剪切版服务对象
+```java
+  public class BinderHookHandler implements InvocationHandler {
+    //原始Service对象
+    Object base;
+    public BinderHookHandler(IBinder base,Class<?> stubClass){
+      try{
+        Method asInterfaceMethod = stubClass.getDeclaredMethod("asInterface",IBinder.class);
+        //IClipboard.Stub.asInterface(base);
+        this.base = asInterfaceMethod.invoke(null,base);
+      }catch(Exception e){
+        throw new RuntimeException("hooked failed!");
+      }
+    }
+    @TargetApi(Build.VERSION_CODES.HONEYCOMB)
+    @Override
+    public Object invoke(Object proxy,Method method,Object[] args) throws Throwable{
+      //把剪切板的内容替换为"you are hooked"
+      if("getPrimaryClip".equals(method.getName())){
+        return ClipData.newPlainText(null,"you are hooked");
+      }
+      //欺骗系统，使之认为剪切板上一直有内容
+      if("hasPrimaryClip".equals(method.getName())){
+        return true;
+      }
+      return method.invoke(base,args);
+    }
+  }
+```
+注意，我们拿到原始IBiner对象之后，如果我们希望使用被Hook之前的系统服务，并不能直接使用这个IBinder对象，而是需要使用asInterface方法将它
+转换为IClipboard接口；因为getService方法返回的IBinder实际上是一个裸Binder代理对象，只有与驱动打交道的能力，并不能独立工作；asInterface()
+方法返回的IClipboard.Stub.Proxy类的对象通过操纵这个裸BinderProxy对象从而实现了IClipboard接口定义的操作。  
+2.伪造IBinder对象  
+上一步，我们已经伪造好了系统服务对象，现在要做的是想办法让asInterface方法返回我们伪造的对象。
+```java
+  public class BinderProxyHandler implements InvocationHandler {
+    //绝大部分，这是一个BinderProxy对象
+    //只有当Service和我们在同一个进程时才是Binder本地对象
+    IBinder base;
+    Class<?> stub;
+    Class<?> mInterface;
+    public BinderProxyHandler(IBinder base){
+      this.base=base;
+      try{
+        stub = Class.forName("android.content.IClipboard$Stub");
+        mInterface = Class.forName("android.content.IClipboard");
+      }catch(Exception e){
+        e.printStatchTrace();
+      }
+      @Override
+      public Object invoke(Object proxy,Method method,Object[] args) throws Throwable{
+        if("quearyLocalInterface".equals(method.getName())){
+            //这里返回真正被Hook掉的Service接口，queryLocalInterface就不是原本的意思了
+            return Proxy.newProxyInstance(proxy.getClass().getClassLoader(),
+              //asInterface时会检测是否是特定类型的接口然后进行强制转换
+              new Class[] {IBinder.class,IInterface.class,this.mInterface},
+              new BinderHookHandler(base,stub);
+            );
+            return method.invoke(base,args);
+         }
+      }
+    }
+  }
+```
+使用动态代理伪造一个跟原始IBinder一模一样的对象，然后在这个伪造的IBinder对象的queryLocalInterface方法返回我们第一步创建的
+伪造的系统服务对象。  
+3.替换ServiceManager的IBinder对象  
+使用反射修改ServiceManager类里面缓存的Binder对象，使得getService方法返回我们伪造的IBinder对象，进而asInterface方法使用
+伪造IBinder对象的queryLocalInterface方法返回我们伪造的系统服务对象。
+```java
+  Class<?> serviceManager = Class.forName("android.os.ServiceManager");
+  Method getService = serviceManager.getDeclaredMethod("getService",String.class);
+  //ServiceManager管理原始的Clipboard Binder对象
+  IBinder rawBinder = (IBinder)getService.invoke(null,CLIPBOARD_SERVICE);
+  //Hook掉这个Binder代理对象的queryLocalInterface方法
+  IBinder hookBinder = (IBinder) Proxy.newProxyInstance(serviceManager.getClassLoader(),
+    new Class<?>[]{IBinder.class},
+    new BinderProxyHandler(rawBinder);
+   );
+   //把这个Hook过的Binder对象放进ServiceManager的cache里面
+   Field cacheField = serviceManger.getDeclaredField("sCache");
+   cacheField.setAccessible(true);
+   Map<String,IBinder> cache = (Map) cacheField.get(null);
+   cache.put(CLIPBOARD_SERVICE,hookBinder);
+   
+   
+```
+
+
+
+
+
 
 
 ## 感谢
