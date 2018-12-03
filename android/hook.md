@@ -258,12 +258,127 @@ Android系统通过Binder机制给应用程序提供了一系列的系统服务�
    cacheField.setAccessible(true);
    Map<String,IBinder> cache = (Map) cacheField.get(null);
    cache.put(CLIPBOARD_SERVICE,hookBinder);
-   
-   
 ```
-
-
-
+## Hook机制之AMS&PMS
+* ActivityManagerService:  
+1.startActivity最终调用了AMS的startActivity系列方法，实现了Activity的启动；Activity生命周期回调，也在AMS中完成；  
+2.startService,bindService最终调用到AMS的startService和bindService方法
+3.动态广播的注册和接收在AMS中完成(静态广播在PMS中完成)
+4.getContentResolver最终从AMS的getContentProvider获取到ContentProvider
+而PMS则完成诸如权限校验(checkPermission,checkUidPermission),Apk meta信息获取(getApplicationInfo等)，四大组件信息获取(query系列方法)等重要功能
+### AMS获取过程
+startActivity两种方式：  
+1.直接调用Context类的startActivity方法；这种方法启动的activity没有activity栈，因此不能以standard方法启动，必须加上FLAG_ACTIVITY_NEW_TASK这个flag  
+2.调用被Activity类重载过的startActivity方法，通常在我们的activity中直接调用这个方法就是这种形式
+* Context.startActivity
+Context是一个抽象类，Activity,Service等并没有直接继承Context，而是继承了ContextWrapper;ContextWrapper的实现:
+```java
+  @Override
+  public void startActivity(Intent intent){
+    mBase.startActivity(intent);
+  }
+```
+其中mBase的实现是ContextImpl类。所以，Context.startActivity最终使用了ContextImpl里面的方法：
+```java
+  public void startActivity(Intent intent,Bundle options){
+    warnIfCallingFromSystemProcess();
+    if((intent.getFlags&Intent.FLAG_ACTIVITY_NEW_TASK) ==0){
+      throw new AndroidRuntimeException(
+        "Calling startActivity() from outside of an Activity "
+        +"context requires the FLAG_ACTIVITY_NEW_TASK flag."
+        +" Is this really what you want?"
+      );
+    }
+    mMainThread.getInstrumentation().execStartActivity(getOunterContext(),mMainThread.getApplicationThread,null,(Activity)null,intent,-1,options);
+  }
+```
+代码相当简单，我们知道了两件事：
+1.我们知道在Service等非Activity的Context里启动Activity为什么需要添加FLAG_ACTIVITY_NEW_TASK
+2.startActivity使用了Instrumentation类的execStartActivity方法；
+```java
+  public ActivityResult execStartActivity(
+    Context who,IBinder contextThread,IBinder token,Activity target,Intent intent,int requestCode,Bundle options){
+      try{
+        intent.migrateExtraStreamToClipData();
+        intent.prepareToLeaveProcess();
+        int result = ActivityManagerNative.getDefault().startActivity(whoThread,who.getBasePackageName(),intent,intent.resolveTypeIfNeeded(who.getContentResolver()),token,target!=null?target.mEmbeddedID:null,requestCode,0,null,null,options);
+        checkStartActivityResult(result,intent);
+      }catch(RemoteException e){
+        
+      }
+      return null;
+    }
+  ;
+```
+### Activity.startActivity
+这个startActivity通过若干次调用辗转到startActivityForResult这个方法：
+```java
+  Instrumentation.ActivityResult ar = mInstrumentation.execStartActivity(this,mMainThread.getApplicationThread(),mToken,this,intent,requestCode,options);
+```
+### Hook AMS
+ActivityManagerNative实际上是ActivityManagerService这个远程对象的Binder代理对象；每次需要与AMS打交道时，需要借助这个代理对象通过驱动进而完成IPC调用。
+```java
+  static public IActivityManager getDefault(){
+    return gDefault.get();
+  }
+```
+gDefault这个静态变量定义如：
+```java
+  private static final Singleton<IActivityManager> gDefault = new Singleton<IActivityManager>(
+    protected IActivityManager create(){
+      IBinder b = ServiceManager.getService("activity");
+      IActivityManager am = IActivityManager.Stub.asInterface(b);
+      return am;
+    } 
+  );
+```
+Hook掉AMS:
+```java
+  Class<?> actManagerNativeClass = Class.forName("android.app.ActivityManagerNative");
+  //获取gDefault字段，想办法替换它
+  Field gDefaultField=actMangerNativeClass.getDeclaredField("gDefault");
+  gDefaultField.setAccessible(true);
+  Object gDefault = gDefaultField.get(null);
+  //4.x以上的gDefault是一个android.util.Singleton对象
+  Class<?> singleton = Class.forName("android.util.Singleton");
+  Field mInstanceField = singleton.getDeclaredField("mInstance");
+  mInstanceField.setAccessible(true);
+  //ActivityManagerNative的gDefault对象里原始的IActivityManger对象
+  Object rawActManager = mInstanceField.get(gDefault);
+  //创建一个这个对象的代理，然后替换这个字段
+  Class<?> iActivityManagerInterface=Class.forName("android.app.IActivityManager");
+  Object proxy=Proxy.newProxyInstance(Thread.currentThread().getContextClassLoader(),
+    new Class<?>[] {iActivityManagerInterface},new IActivityMangerHandler(rawActManager)
+  );
+  mInstanceField.set(gDefault,proxy);
+```
+Android Framework层对于四大组件处理，调用AMS服务的时候，全部都是通过使用这种方式
+### PMS获取过程
+PMS的获取也通过Context完成，具体是getPackageManager这个方法。
+```java
+  public PackageManger getPackageManager(){
+    if(mPackageManager!=null){
+      return mPackagerManager;
+    }
+    IPackageManager pm = ActivityThread.getPackageManager();
+    if(pm!=null){
+      return (mPackageManager=new ApplicationPackageManager(this,pm));
+    }
+    return null;
+  }
+```
+真正的PMS的代理对象在ActivityThread里面。ContextImpl通过ApplicationPackageManager对它进行一层包装
+```java
+  public static IPackageManager getPackageManager(){
+    if(sPackageManger!=null){
+      return sPackageManger;
+    }
+    IBinder b=ServiceManager.getService("package");
+    sPackageManager=IPackageManager.Stub.asInterface(b);
+    return sPackageManger;
+  }
+```
+### Hook PMS
 
 
 
