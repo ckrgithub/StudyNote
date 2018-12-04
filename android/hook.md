@@ -379,8 +379,33 @@ PMS的获取也通过Context完成，具体是getPackageManager这个方法。
   }
 ```
 ### Hook PMS
-
-
+```java
+  //获取全局ActivityThread对象
+  Class<?> actThreadClass = Class.forName("android.app.ActivityThread");
+  Method curActThreadMethod = actThreadClass.getDeclaredMethod("currentActivityThread");
+  Object curActThread = curActThreadMethod.invoke(null);
+  //获取ActivityThread里原始的sPackageManager
+  Field sPackageMangaerField = actThreadClass.getDeclaredField("sPackageManager");
+  sPackageManagerField.setAccessible(true);
+  Object sPackageManager = sPackageManagerField.get(curActThread);
+  //hook掉原始对象
+  Class<?> iPackageManagerInterface = Class.forName("android.content.pm.IPackageManager");
+  Object proxy = Proxy.newProxyInstance(iPackageManagerInterface.getClassLoader(),
+    new Class<?>[]{iPackageManagerInterface},
+    new HookHandler(sPackageManager)
+  );
+  //替换掉ActivityThread里的sPackageManager字段
+  sPackageManagerField.set(curActThread,proxy);
+  //替换掉ApplicationPackageManager里的mPM对象
+  PackageManger pm = context.getPackageManager();
+  Field mField = pm.getClass().getDeclaredField("mPM");
+  mField.setAccessible(true);
+  mField.set(pm,proxy);
+```
+注意：Context实现类里没有使用静态全局变量来保存PMS的代理对象，而是每拥有一个Context的实例就持有一个PMS代理对象引用。所以如果想要完全
+Hook住PMS，需要精确控制整个进程内部创建的Context对象。由此可知，静态变量和单例都是良好的Hook点。
+以上Hook仅仅使用反射和动态代理技术，更加强大的Hook机制可以进行字节码编织，如J2EE使用了cglib和asm进行AOP编程；而android上现有的插件框架
+还是加载编译时代码，采用动态生成类的技术理论上也是可行的。
 
 
 ## 感谢
