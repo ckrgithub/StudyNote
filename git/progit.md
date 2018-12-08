@@ -196,4 +196,244 @@ git status 命令的输出十分详细，但其用语有些繁琐。使用git st
   # ignore all .pdf files in the doc/ directory
   doc/**/*.pdf
 ```
+* 查看已暂存和未暂存的修改
+git diff将通过文件补丁的格式显示具体哪些行为发生了改变。如：再次修改readme文件后暂存，然后编辑contributing.md文件后先不暂存，运行status命令：
+```
+  $ git status
+  On branch master
+  Changes to be committed:
+    (use "git reset HEAD <file>..." to unstage)
+      modified: readme
+  Changes not staged for commit:
+    (use "git add <file>..." to update what will be committed)
+    (use "git checkout --<file>..." to discard changes in working directory)
+      modified: contributing.md
+```
+要查看尚未暂存的文件更新了哪些内容：
+```
+  $ git diff
+  diff --git a/contributing.md b/contributing.md
+  index 8ebb991..643e24f 100644
+  --- a/contributing.md
+  +++ b/contributing.md
+  @@ -65,7 +65,8 @@ branch directly, things can get messy.
+    Please include a nice description of your changes when you submit your PR;
+    if we have to read the whole diff to figure out why you are contributing in the first place,you are less likely to get feedback and have your change
+  -merged in.
+  +merged in. Also,split your changes into comprehensive chunks if your patch is longer than a dozen lines.
+  If you are starting to work on a particular area,feel free to submit a PR that highlights your work in progress (and not in the PR title that it is)
+```
+此命令比较的是工作目录中当前文件和暂存区域快照之间的差异，也就是修改之后还没有暂存起来的变化内容。若要查看已暂存的将要添加到下次提交了的内容，可以用git diff --cached 命令。(Git1.6.1以上版本允许使用git diff --staged，效果一样)
+```
+  $ git diff --staged
+  diff --git a/readme b/readme
+  new file mode 100644
+  index 0000000..03092a1
+  --- /dev/null
+  +++ b/readme
+  @@ -0,0 +1 @@
+  +My Project
+```
+* 提交更新
+请一定要确认还有什么修改过的或新建的文件还没有git add过，否则提交的时候不会记录这些还没暂存起来的变化。所以，每次提交前，先用git status查看，然后
+在运行git commit,添加-m选项，将提交信息与命令放在同一行。
+```
+  $ git commit -m "Story 182: Fix a bug"
+  [master 463dc4f] Story 182: Fix a bug
+    2 files changed,2 insertions(+)
+    create mode 100644 readme
+```
+* 跳过使用暂存区域
+git commit -a 命令会自动把所有已跟踪过的文件暂存起来一并提交：
+```
+  $ git status
+  On branch master
+  Changes not stagged for commit:
+    (use "git add <file>..." to update what will be committed)
+    (use "git checkout -- <file>..." to discard changes in working directory)
+      modified: contributing.md
+  no changes add to commit (use "git add" and/or "git commit -a")
+  
+  $ git commit -a -m 'added new benchmarks'
+  [master 83e36c7] added new benchmarks
+    1 file changed, 5 insertions(+), 0 deletions(-)
+```
+* 移除文件
+要从Git移除文件，必须从已跟踪文件清单中移除(从暂存区移除),然后提交。可以使用git rm命令完成此项工作，并连带从工作目录中删除指定的文件。
+如果手工删除文件，运行git status时就会在"Changes not staged for commit"部分看到：
+```
+  $ rm readme.md
+  $ git status
+  On branch master
+  Your branch is up-to-date with 'origin/master'.
+  Changes not staged for commit:
+    (use "git add/rm <file>..." to update what will be committed)
+    (use "git checkout -- <file>..." to discard changes in working directory)
+      deleted: readme.md
+  no changes added to commit (use "git add" and/or "git commit -a")
+```
+然后再运行git rm记录此次移除文件的操作：
+```
+  $ git rm readme.md
+  rm 'readme.md'
+  $ git status
+  On branch master
+  Changes to be committed:
+    (use "git reset HEAD <file>..." to unstage)
+      deleted: readme.md
+```
+如果删除之前修改过并已经放到暂存区域的话，则必须要强制删除选项-f.这是一种安全特性，用于防止误删还没有添加到快照的数据，这样的数据不能被Git恢复.
+另一种情况，想把文件从Git仓库中删除，但希望保留在当前工作目录中。当你忘记添加.gitignore文件，不小心把一个很大的日志文件或一推.a这样编译生成文件添加到暂存区时，这一做法尤其有用。使用--cached选项：
+```
+  $ git rm --cached readme
+```
+git rm 命令后面可以列出文件或目录的名字，也可以使用glob模式:
+```
+  $ git rm log/\*.log
+```
+注意到星号之前的反斜杠,因为Git有他自己的文件模式。此命令删除log/目录下扩展名为.log的所有文件。类似的比如：
+```
+  $ git rm \*~   //删除以~结尾的所有文件
+```
+* 移动文件
+要在Git中对文件改名：
+```
+  $ git mv file_from file_to
+```
+```
+  $ git mv readme.md readme
+  $ git status
+  On branch master
+  Changes to be committed:
+    (use "git reset HEAD <file>..." to unstage)
+      renamed: readme.md -> readme
+```
+其实，运行git mv相当于运行了三条命令：
+```
+  $ mv readme.md readme
+  $ git rm readme.md
+  $ git add readme
+```
+## 查看提交历史
+```
+  $ git log
+  commit ca82a6dff817ec66f44342007202690a93763949
+  Author: ckrgithub
+  Date: Sun Dec 28 11:14:00 2018
+    changed the version number
+    
+  commit a11bef06a3f659402fe7563abf99ad00de2209e6
+  Author: ckrgithub
+  Date: Sun Dec 28 11:13:00 2018
+    first commit
+```
+git log会按提交时间列出所有的更新，最近更新排在最上面。git log 有许多选项：一个常用的选项是-p,用来显示每次提交的内容差异.你也可以加上-1来仅显示最近两次提交：
+```
+  $ git log -p -1
+  commit ca82a6dff817ec66f44342007202690a93763949
+  Author: ckrgithub
+  Date: Sun Dec 28 11:14:00 2018
+    changed the version number
+  diff --git a/Rakefile b/Rakefile
+  index a874b73..8f94139 100644
+  --- a/Rakefile
+  +++ b/Rakefile
+  @@ -5 7 +5 6 @@ require 'rake/gempackagetask'
+     spec = Gem::Specification.new do |s|
+    s.platform = Gem::Platform::RUBY
+    s.name = "simplegit"
+  - s.version = "0.1.0"
+  + s.version = "0.1.1"
+    s.author = "Scott Chacon"
+    s.email = "schacon@gee-mail.com"
+    s.summary = "A simple gem for using Git in Ruby code."
+```
+使用--stat选项：在每次提交的下面列出所有被修改过的文件、有多少文件被修改了以及被修改过的文件的哪些行被移除或是添加了。
+```
+  $ git log --stat
+  commit ca82a6dff817ec66f44342007202690a93763949
+  Author: ckrgithub
+  Date: Sun Dec 28 11:14:00 2018
+    changed the version number
+  Rakefile | 2 +-
+  1 file changed, 1 insertion(+), 1 deletion(-)
+  
+```
+使用 --pretty :指定使用不同于默认格式的方式展示提交历史。这个选项有一些内径的子选项，如oneline将每个提交放在一行显示
+```
+  $ git log --pretty=online
+  ca82a6dff817ec66f44342007202690a93763949 changed the version number
+  a11bef06a3f659402fe7563abf99ad00de2209e6 first commit
 
+```
+使用 format：定制要显示的记录格式
+```
+  $ git log --pretty=format:"%h - %an, %ar : %s"
+  ca82a6d - Scott Chacon, 6 years ago : changed the version number
+  085bb3b - Scott Chacon, 6 years ago : removed unnecessary test
+  a11bef0 - Scott Chacon, 6 years ago : first commit
+```
+|选项|说明|
+|---|---|
+|%H|commit的完整hash值|
+|%h|commit的简短hash值|
+|%T|tree的完整hash值|
+|%t|tree的简短hash值|
+|%P|parent的完整hash值|
+|%p|parent的简短hash值|
+|%an|作者的名字|
+|%ae|作者的电子邮件|
+|%ad|作者修订日期|
+|%ar|作者修订日期，按多久以前的方式显示|
+|%ch|提交者的名字|
+|%ce|提交者的电子邮件|
+|%cd|提交日期|
+|%cr|提交日期，按多久以前的方式显示|
+|%s|提交说明|
+
+但你为某个项目发布补丁，然后某个核心成员将你补丁并入项目时，你就是作者，而那个核心成员就是提交者。
+当oneline或format与另一个log选项--graph结合使用时尤其有用
+```
+  $ git log --pretty=format:"%h %s" --graph
+  * 2d3acf9 ignore errors from SIGCHLD on trap
+  * 5e3ee11 Merge branch 'master' of git://github.com/dustin/grit
+  |\
+  | * 420eac9 Added a method for getting the current branch.
+  * | 30e367c timeout code and tests
+  * | 5a09431 add timeout protection to grit
+  * | e1193f8 support for heads with slashes in them
+  |/
+  * d6016bc require time for xmlschema
+  * 11d191e Merge branch 'defunkt' into local
+```
+git log命令支持选项  
+|选项|说明|
+|---|---|
+|-p|按补丁格式显示每个更新之间的差异|
+|--stat|显示每次更新的文件修改统计信息|
+|--shortStat|只显示--stat中最后的行数修改添加移除统计|
+|--name-only|仅在提交信息后显示已修改的文件清单|
+|--name-status|显示新增、修改、删除的文件清单|
+|--abbrev-commit|仅显示SHA-1的前几个字符，而非所有的40个字符|
+|--relative-date|使用较短的相对时间显示(如："2 weeks ago")|
+|--graph|显示ASCII图形表示的分支合并历史|
+|--pretty|使用其他格式显示历史提交信息|
+
+* 限制输出长度
+```
+  $ git log --since=2.weeks  //列出最近两周的提交
+```
+用--autor选项显示指定作者的提交，用--grep选项搜索提交说明中的关键字。(要得到同时满足两个选项搜素条件的提交，必须用--all-match选项。否则，满足任意一个条件的提交都会被匹配出来).用-S可以列出那些添加或移除了某些字符串的提交。如，想找出添加或移除某个特定函数的引用的提交：
+```
+  $ git log -Sfunction_name
+```
+用path：指定某些文件或目录的历史提交。
+|选项|说明|
+|----|----|
+|-(n)|仅显示最近的n条提交|
+|--since,--after|仅显示指定时间之后的提交|
+|--until,--before|仅显示指定时间之前的提交|
+|--author|仅显示指定作者相关的提交|
+|--committer|仅显示指定提交者相关的提交|
+|--grep|仅显示含指定关键字的提交|
+|-S|仅显示添加或移除某个关键字的提交|
