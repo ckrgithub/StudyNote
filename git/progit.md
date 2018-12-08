@@ -437,3 +437,244 @@ git log命令支持选项
 |--committer|仅显示指定提交者相关的提交|
 |--grep|仅显示含指定关键字的提交|
 |-S|仅显示添加或移除某个关键字的提交|
+
+* 撤销操作
+提交完了才发现漏掉几个文件没有添加，或者提交信息写错了。此时可以带有--amend选项的提交命令尝试重新提交：
+```
+  $ git commit --amend
+```
+这个命令会将暂存区中的文件提交。如果自上次提交以来你还未做任何修改，那么快照会保持不变，而你修改的只是提交信息。如：
+你提交后发现忘记了暂存某些需要的修改：
+```
+  $ git commit -m 'init commit'
+  $ git add forgotten_file
+  $ git commit --amend
+```
+最终你只会有一个提交-第二次提交将代替第一次提交的结果
+* 取消暂存的文件
+你已修改了两个文件并想要将它们作为两次独立的修改提交，但却意外地输入了git add * 暂存了它们两个。如何只取消暂存两个钟的一个呢？
+```
+  $ git add * 
+  $ git status
+  On branch master
+  Changes to be committed:
+    (use "git reset HEAD <file>..." to unstage)
+      renamed: readme.md -> readme
+      modified: contributing.md
+```
+提示使用git reset HEAD <file>...来取消暂存：
+```
+  $ git reset HEAD contributing.md
+  $ git status
+  On branch master
+  Changes to be committed:
+    (use "git reset HEAD <file>..." to unstage)
+      renamed: readme.md -> readme
+  Changes not stagged for commit:
+    (use "git add <file>..." to update what will be committed)
+    (use "git checkout --<file>..." to discard changes in working directory)
+      modified: contributing.md
+```
+虽然加上--hard选项可以令git reset成为一个危险命令(可能导致工作目录中所有当前进度丢失)，但本例中工作目录内的文件并不会修改。
+* 撤销对文件的修改
+如果不想保留对contributing.md文件的修改，使用git checkout命令：
+```
+  $ git checkout --contributing.md
+  $ git status
+  On branch master
+  Changes to be committed:
+    (use "git reset HEAD <file>..." to unstage)
+      renamed: readme.md -> readme
+```
+## 远程仓库的使用
+* 查看远程仓库
+git remote：会列出你指定的每个远程服务器的简写。
+```
+  $ git clone https://github.com/ckrgithub/StudyNote
+  $ cd StudyNote
+  $ git remote
+  origin
+```
+指定选项-v:显示需要读写远程仓库使用的Git保存的简写与其对应的URL
+```
+  $ git remote -v
+  origin https://github.com/ckrgithub/StudyNote (fetch)
+  origin https://github.com/ckrgithub/StudyNote (push)
+```
+* 添加远程仓库
+git remote add <shortname> <url>添加一个新的远程Git仓库
+```
+  $ git remote add gt https://github.com/ckrgithub/GitNote
+  $ git remote -v
+  origin https://github.com/ckrgithub/StudyNote (fetch)
+  origin https://github.com/ckrgithub/StudyNote (push)
+  gt https://github.com/ckrgithub/GitNote (fetch)
+  gt https://github.com/ckrgithub/GitNote (push)
+```
+使用gt代替整个url。如：拉取信息
+```
+  $ git fetch gt
+  remote: Counting objects: 43, done.
+  remote: Compressing objects: 100% (36/36), done.
+  remote: Total 43 (delta 10), reused 31 (delta 5)
+  Unpacking objects: 100% (43/43), done.
+  From https://github.com/ckrgithub/GitNote
+   * [new branch] master -> gt/master
+```
+* 从远程仓库中抓取与拉取
+```
+  git fetch [remote-name]
+```
+该命令访问远程仓库，从中拉取所有你还没有的数据。执行完后，你将会拥有那个远程仓库总所有分支的引用，可以随时合并或查看。
+git fetch命令将数据拉取到你的本地仓库-它不会自动合并或修改你当前的工作。git pull命令会自动抓取然后合并远程分支到当前分支。
+* 推送到远程仓库
+git push [remote-name] [branch-name].当你想要将master分支推送到origin服务器时(再次说明，clone时通常会自动帮你设置好这两个名字)
+```
+  $ git push origin master
+```
+只有当你有所clone服务器的写入权限，并之前没有人推送过时，这条命令才能生效。当其他人推送到上游后你再推送到上游，你的推送会被拒绝。你必须先将他们的工作拉取下来并将其合并进你的工作后才能推送。
+* 查看远程仓库
+git remote show [remote-name]:
+```
+  $ git remote show origin
+  * remote origin
+    Fetch URL: https://github.com/ckrgithub/StudyNote
+    Push URL: https://github.com/ckrgithub/StudyNote
+    HEAD branch: master
+    Remote branches:
+      master      tracked
+      dev-branch  tracked
+    Local branch configured for 'git pull'
+      master merges with remote master
+    Local ref configured for 'git push'
+      master pushes to master (up to date)
+```
+* 远程仓库的移除与重命名
+git remote rename去修改一个远程仓库的简写名
+```
+  $ git remote rename gt paul
+  $ git remote
+  origin
+  paul
+```
+这同样也会修改你的远程分支名字，过去引用gt/master的现在会引用paul/master。
+git remote rm移除一个远程仓库
+```
+  $ git remote rm paul
+  $ git remote
+  origin
+```
+## 打标签
+* 列出标签
+```
+  $ git tag
+  v0.1
+  v1.3
+```
+指定特定的模式查找标签
+```
+  $ git tag -l 'v1.8.5*'
+  v1.8.5
+  v1.8.5-rc0
+  v1.8.5.1
+```
+* 创建标签
+轻量标签(lightweight):很像一个不会改变的分支-它只是一个特定提交的引用
+附注标签(annotated)：存储在Git数据库中的一个完整对象。
+* 附注标签
+指定-a选项：
+```
+  $ git tag -a v1.4 -m 'my version 1.4'
+  $ git tag
+  v0.1
+  v1.3
+  v1.4
+```
+-m选项指定：一条将会存储在标签中的信息.通过git show命令可以看到标签信息与对应的提交信息：
+```
+  $ git show v1.4
+  tag v1.4
+  Tagger: ckrgithub
+  Date:   Sat Dec 8 15:43:00 2018 -0700
+  my version 1.4
+  
+  commit  ca82a6dff817ec66f44342007202690a93763949
+  Tagger: xxx
+  Date:   Sat Dec 8 15:46:00 2018 -0700
+    changed the version number
+```
+* 轻量标签
+本质上是将提交校验和存储到一个文件中-没有保存任何其他信息
+```
+  $ git tag v1.4-ckr
+  $ git tag
+  v0.1
+  v1.3
+  v1.4-ckr
+```
+使用git show不会显示额外标签信息：
+```
+  $ git show v1.4-ckr
+  commit  ca82a6dff817ec66f44342007202690a93763949
+  Tagger: xxx
+  Date:   Sat Dec 8 15:46:00 2018 -0700
+    changed the version number
+```
+* 后期打标签
+你可以对过去的提交打标签。如
+```
+  $ git log --pretty=oneline
+  15027957951b64cf874c3557a0f3547bd83b3ff6 Merge branch 'experiment'
+  a6b4c97498bd301d84096da251c98a07c7723e65 beginning write support
+  0d52aaab4479697da7686c15f77a3d64d9165190 one more thing
+  6d52a271eda8725415634dd79daabbc4d9b6008e Merge branch 'experiment'
+  0b7434d86859cc7b8c3d5e1dddfed66ff742fcbc added a commit function
+  4682c3261057305bdd616e23b64b0857d832627b added a todo file
+  166ae0c4d3f420721acbb115cc33848dfcc2121a started write support
+  9fceb02d0ae598e95dc970b74767f19372d61af8 updated rakefile
+  964f16d36dfccde844893cac5b347e7b3d44abbc commit the todo
+  8a5cbc430f1a9c3d00faaeffd07798508422908a updated readme
+```
+现在假设在v1.2时忘记了给项目打标签，也就是在'updated rakefile'提交。你可以在之后补上标签。
+```
+  $ git tag -a v1.2 9fceb02
+  $ git tag
+  v0.1
+  v1.2
+  v1.3
+  v1.4-ckr
+```
+* 共享标签
+默认情况下，git push命令并不会传送标签到远程仓库服务器上。在创建完标签后你必须显示地推送标签到共享服务器上。
+```
+  $ git push origin v1.5
+```
+一次性推送很多标签，可以使用--tags选项的git push命令。
+```
+  $ git push origin --tags
+```
+* 检出标签
+在Git中并不能真的检出一个标签，因为它们并不能像分支一样来回移动。使用git checkout -b [branchname][tagname]在特定的标签创建一个新分支：
+```
+  $ git checkout -b version2 v2.0.0
+  Switched to a new branch 'version2'
+```
+## Git 别名
+Git并不会在你输入部分命令时自动推断出你想要的命令。如果不想每次都输入完整的Git命令，可以通过git config文件轻松地为每个命令设置别名。
+```
+  $ git config --global alias.co checkout
+  $ git config --global alias.br branch
+  $ git config --global alias.ci commit
+  $ git config --golbal alias.st status
+```
+当输入git commit时，只需要输入git ci。在创建你认为存在的命令时这个技术会很有用。
+```
+  $ git config --global alias.unstage 'reset HEAD --' //会等于下面两个命令
+  
+  $ git unstage fileA
+  $ git reset HEAD -- fileA
+```
+
+
+
+
