@@ -683,6 +683,199 @@ Git保存的不是文件的变化或者差异，而是一系列不同时刻的�
   $ git add README test.txt LICENSE
   $ git commit -m 'init'
 ```
-当使用git commit进行提交操作时，Git会先计算每个子目录的校验和，然后在Git仓库中这些校验和保存为树对象。随后，Git便会创建一个提交对象，它除了包含上面提到的那些信息外，还包含指向这个树对象(项目根目录)的指针。如此一来，Git就可以在需要的时候重现此次保存的快照。现在，Git仓库中有五个对象：三个blob对象(保存着文件快照)、一个树对象(记录着目录结构和blob对象索引)以及一个提交对象(包含着指向前述树对象的指针和所有提交信息)。
+当使用git commit进行提交操作时，Git会先计算每个子目录的校验和，然后在Git仓库中这些校验和保存为树对象。随后，Git便会创建一个提交对象，它除了包含上面提到的那些信息外，还包含指向这个树对象(项目根目录)的指针。如此一来，Git就可以在需要的时候重现此次保存的快照。现在，Git仓库中有五个对象：三个blob对象(保存着文件快照)、一个树对象(记录着目录结构和blob对象索引)以及一个提交对象(包含着指向前述树对象的指针和所有提交信息)。  
+
+做些修改后再次提交，那么这次生产的提交对象会包含一个指向上次提交对象(父对象)的指针。Git的分支，其实本质上仅仅是指向提交对象的可变指针。Git的默认分支名字是master。在多次提交操作之后，你其实已经有一个指向最后那个提交对象的master分支。它会在每次的提交操作中自动向前移动。  
+* 提示：Git的master分支并不是一个特殊分支。它跟其他分支完全没有区别。之所以几乎每个仓库都有master分支，是因为git init命令默认创建它，并且大多数人懒得去改动它。
+## 分支创建
+```
+ $ git branch dev  //会在当前所在的提交对象上创建一个指针
+```
+在Git中，HEAD是一个指针，指向当前所在的本地分支(注：将HEAD想象为当前分支的别名)  
+使用git log命令查看各个分支当前所指的对象
+```
+ $ git log --oneline --decorate
+ f30ab (HEAD, master, dev) add feature #32 - ability to add new 
+ 34ac2 fixed bug #1328 - stack overflow under certain conditions
+ 98ca9 initial commit of my project
+```
+正如你所见，当前master和dev分支均指向校验和以f30ab开头的提交对象。
+## 分支切换
+```
+ $ git checkout dev
+```
+这样HEAD就指向dev分支了。这样的实现方式会给我们带来什么好处：
+```
+ $ vim test.txt
+ $ git commit -a -m 'made a change'
+```
+如图所示，你的dev分支向前移动，但master分支没有，它任然指向运行git checkout时所指的对象。我们切换回master分支看看：
+```
+ $ git checkout master
+```
+这条命令做了两件事。一是使HEAD指回master分支，二是将工作目录恢复成master分支所指向的快照内容。也就是说，你现在做修改的话，项目将始于一个较旧的版本。本质上来讲，这就是忽略dev分支所做的修改，以便于向另一个方向进行开发。
+* 注意：分支切换会改变你工作目录中的文件。在切换分支时，一定要注意你工作目录里的文件会被改变。如果Git不能干净利落地完成这个任务，它将禁止切换分支
+```
+ $ vim text.txt
+ $ git commit -a -m 'made other changes'
+```
+这个项目的提交历史已经产生了分叉。因为刚才你创建了一个新分支，并切换过去进行了一些工作，随后又切换会master分支进行了另外一些工作。上述两次改动针对的是不同分支：你可以在不同分支间不断地来回切换和工作。可以使用git log查看分叉历史
+```
+ $ git log --oneline --decorate --graph --all
+ * c2b9e (HEAD, master) made other changes
+ | * 87ab2 (dev) made a change
+ |/
+ * f30ab add feature #32 - ability to add new formats to the
+ * 34ac2 fixed bug #1328 - stack overflow under certain conditions
+ * 98ca9 initial commit of my project
+```
+Git分支实质上仅是包含所指对象检验和的文件，所以它的创建和销毁都异常高效。创建一个新分支就相当于往一个文件中写入41个字节(40个字符和1个换行符).
+## 分支的新建与合并
+案例：
+    1.开发某个网站
+    2.为实现某个新的需求，创建一个分支
+    3.在这个分支上开展工作
+  正在此时，接到一个电话说有个很严重的问题需要紧急修补：
+    1.切换到你的线上分支。
+    2.为这个紧急任务新建一个分支，并在其中修复它
+    3.在测试通过之后切换回线上分支，然后合并这个修补分支，最后将改动推送到线上分支
+    4.切换回你最初工作的分支上，继续工作。
+### 1.新建分支
+你已经决定解决你的公司使用的问题#53问题，新建一个分支并同时切换到那个分支上
+```
+ $ git checkout -b iss53
+ Switched to a new branch "iss53"
+```
+它是下面两条命令的简写：
+```
+ $ git branch iss53
+ $ git checkout iss53
+```
+继续在#53问题上工作，并做了些提交。
+```
+ $ vim index.html
+ $ git commit -a -m 'added a new footer'
+```
+现在你接到那个电话，有个紧急问题等你来解决。此时，留意你的工作目录和暂存区里那些还没有被提交的修改，它可能会和你即将检出的分支产生冲突从而阻止Git切换到该分支。
+```
+ $ git checkout master
+ Switched to branch 'master'
+ $ git checkout -b hotfix
+ Switched to a new branch 'hotfix'
+ $ vim index.html
+ $ git commit -a -m 'fixed the broken email address'
+ [hotfix 1fb7853] fixed the broken email address
+  1 file changed, 2 insertions(+)
+```
+合并回你的master分支来部署到线上。
+```
+ $ git checkout master
+ $ git merge hotfix
+ Updating f42c576...3a0874c
+ Fast-forward
+  index.html | 2 ++
+  1 file changed, 2 insertions(+)
+```
+由于当前master分支所指向的提交是你当前提交(有关hotfix的提交)的直接上游，所以Git只是简单的将指针向前移动。换句话说，当你试图合并两个分支时，如果顺着一个分支走下去能够到达另一个分支，那么Git在合并两者的时候，只会简单的将指针向前推进(指针右移)，因为这种情况下的合并操作没有需要解决的分歧--这就叫做"快进(fast-forward)".  
+关于紧急问题解决之后，准备回到被打断之前时的工作中。然而，你应该先删除hotfix分支，因为你已经不再需要它了--master分支已经指向了同一个位置。
+```
+ $ git branch -d hotfix
+ Deleted branch hotfix (3a0874c)
+ $ git checkout iss53
+ Switched to branch "iss53"
+ $ vim index.html
+ $ git commit -a -m 'finished the new footer'
+ [iss53 ad82d7a] finished the new footer
+  1 file changed, 1 insertion(+)
+```
+### 2.分支的合并
+打算将你的工作合并入master分支。为此，你需要合并iss53分支到master分支
+```
+ $ git checkout master
+ Switched to branch 'master'
+ $ git merge iss53
+ Merge made by the 'recursive' strategy
+ index.html |  1+
+ 1 file changed, 1 insertion(+)
+```
+这和之前合并hotfix分支的时候看起来不一样。这种情况下，你的开发历史从一个更早的地方开始分叉开来(diverged).因为，master分支所在提交并不是iss53分支所在提交的直接祖先。Git将此次三方合并的结果做了一个新的快照并自动创建一个新的提交指向它。这个被称作一次合并提交，它的特别之处在于他有不止一个父提交。
+### 遇到冲突时的分支合并
+如果你在两个不同分支中，对同一个文件的同一个部分进行了不同的修改，Git就没法干净的合并它们。如果你对#53问题的修改和有关hotfix的修改都涉及到同一个文件的同一处，在合并它们的时候就会产生合并冲突：
+```
+ $ git merge iss53
+ Auto-merging index.html
+ CONFLICT (content): Merge conflict in index.html
+ Automatic merge failed; fix conflicts and then commit the result.
+```
+此时Git做了合并，但没有自动地创建一个新的合并提交。Git会暂停下来，等待你去解决合并产生的冲突。
+```
+ $ git status
+ On branch master
+ You have unmerged paths.
+   (fix conflixts and run "git commit")
+   
+ Unmerged paths:
+   (use "git add <file>..." to mark resolution)
+     both modified:   index.html
+ no changes added to commit (use "git add" and/or "git commit -a")
+```
+任何因包含合并冲突而有待解决的文件，都会以未合并状态标识出来。Git会在有冲突的文件中加入标准的冲突解决标记，这样你可以打开这些包含冲突的人家然后手动解决冲突。
+```
+  <<<<<< HEAD:index.html
+ <div id="footer">contact : email.support@github.com</div>
+ ========
+ <div id="footer">
+   please contact us at support@github.com
+ </div>
+ >>>>>> iss53:index.html
+```
+这表示HEAD所指示的版本(也就是你的master分支所在的位置)在这个区段的上半部分(=====的上半部分)，而iss53分支所指示的版本在====的下半部分
+为了解决冲突，你必须选择使用有=====分割的两部分中的一个，或者你自行合并这些内容。
+```
+  <div id="footer">
+    please contact us at email.support@github.com
+  </div>
+```
+```
+  $ git status
+  On branch master
+  All conflicts fixed but you are still merging.
+    (use "git commit" to conclude merge)
+  Changes to be committed:
+      modified:  index.html
+```
+## 分支管理
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
