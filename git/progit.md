@@ -894,6 +894,111 @@ git branch命令不只是可以创建与删除分支。
    * [new branch] serverfix -> serverfix
 ```
 Git自动将serverfix分支名字展开为refs/heads/serverfix:refs/heads/serverfix,意味着，推送本地的serverfix分支来更新远程仓库上的serverfix分支。
+#### 跟踪分支
+从一个远程跟踪分支检出一个本地分支会自动创建一个叫做"跟踪分支"(有时也叫上游分支)。跟踪分支是与远程分支有直接关系的本地分支。如果在一个跟踪分支上输入git pull，Git能自动地识别去哪个服务器上抓取、合并到哪个分支。
+```
+ $ git checkout --track origin/serverfix
+ Branch serverfix set up to track remote branch serverfix from origin.
+ Switched to a new branch 'serverfix'
+```
+如果想将本地分支与远程分支设置为不同名字，命令如下：
+```
+ $ git checkout -b sf origin/serverfix
+ Branch sf set up to track remote branch serverfix from origin.
+ Switched to a new branch 'sf'
+```
+现在，本地分支sf会自动从origin/serverfix拉取。如果想要修改正在跟踪的上游分支，你可以在任意时间使用-u或--set-upstream-to选项运行git branch来显式地设置。
+```
+  $ git branch -u origin/serverfix
+  Branch serverfix set up to strack remote branch serverfix from origin.
+```
+* 提示：当设置好跟踪分支后，可以通过@{upstream}或@{u}快捷方式来引用它。如：可以使用git merge @{u}来取代git merge origin/serverfix.  
+如果想查看设置的所有跟踪分支，可以使用git branch的-vv选项。这会将所有的本地分支列出来并且包含更多的信息。
+```
+  $ git branch -vv
+    iss53     7e424c3 [origin/iss53: ahead 2] forgot the brackets
+    master    1ae2a45 [origin/master] deploying index fix
+  * serverfix f8674d9 [teamone/server-fix-good: ahead 3, behind 1] this should do it
+    testing   5ea463a trying something new
+```
+可以看到iss53分支正在跟踪origin/iss53并且ahead是2，意味着本地有两个提交还没有推送到服务器上。master分支正在跟踪origin/master分支并且是最新的。serverfix分支正在跟踪teamone服务器上的server-fix-good分支并且领先3落后1，意味着服务器上有一次提交还没有合并入同时本地有三次提交还没推送。testing分支并没有跟踪任何远程分支。  
+需要注意的是这些数字的值来自于你从服务器上最后一次抓取的数据。这个命令并没有连接服务器，它只会告诉你关于本地缓存的服务器数据。如果想捅进最新的领先于落后数字，需要在运行此命令前抓取所有的远程仓库，命名为：$ git fetch --all; git branch -vv
+#### 拉取
+当git fetch命令从服务器上抓取本地没有的数据时，他并不会修改工作目录中的内容。它只会获取数据然后让你自己合并。然而，git pull在大多数情况下的含义是一个Git fetch紧接着一个git merge命令。
+#### 删除远程分支
+带有--delete选项的git push命令来删除一个远程分支。
+```
+  $ git push origin --delete serverfix
+  To https://github.com/schacon/simplegit
+  - [deleted] serverfix
+```
+基本上这个命令只是从服务器上移除这个指针。Git服务器通常会保留数据一段时间直到垃圾回收运行。
+## 变基
+在Git中整合来自不同分支的修改主要有两种方法：merge以及rebase。
+### 变基的基本操作
+回顾之前，开发任务分叉到两个不同分支，又各自提交了更新。整合分支最容易的方法时merge命令。它会把两个分支的最新快照(C3和C4)以及二者最近的共同祖先(C2)进行三方合并，合并的结果是生成一个新的快照(并提交).  
+其实，还有一种方法：你可以提取在C4中引入的补丁和修改，然后在C3的基础上应用一次。在Git中，这种操作叫做变基。可以使用rebase命令将提交到某一分支上的所有修改移至另一个分支上，就像重新播放一样。
+```
+  $ git checkout develop
+  $ git rebase master
+  First, rewinding head to replay your work on top of it...
+  Applying: added staged command
+```
+原理是：首先找到这两个分支(即当前develop、变基操作的目标基底分支master)的最近共同祖先C2,然后对比当前分支develop相对于该祖先的历次提交，提取相应的修改并存为临时文件，然后将当前分支指向目标基底C3(master),最后以此将之前另存为临时文件的修改依序引用。  
+现在回到master分支，进行一次快进合并。
+```
+  $ git checkout master
+  $ git merge develop
+```
+此时，C4'指向的快照就和上面使用merge命令合并的C5指向的快照一模一样。这两种整合方法的最终结果没有任何区别，但变基使得提交历史更加整洁。一般使用rebase目的是为了确保在向远程分支推送时能保持提交历史的整洁。注意，无论是通过变基，还是通过三方合并，整合的最终结果所指向的快照始终是一样的，只不过提交历史不同罢了。
+### 有趣的变基例子
+在对两个分支进行变基时，所生成的"重放"并不一定要在目标分支上应用，也可以指定另一个分支进行应用。你创建了一个特性分支server，为服务端添加一些功能，提交了C3和C4.然后从C3上创建了特性分支client,为客户端添加一些功能，提交了C8和C9.最后，回到server分支，又提交了C10.假设你希望将client中的修改合并到主分支并发布，但暂时并不想合并server中的修改。这时，可以使用git rebase --onto选中在client分支里但不在server分支里的修改(即C8和C9)，将它们在master分支上重放：
+```
+  $ git rebase --onto master server client
+```
+意思是：取出client分支，找出处于client分支和server分支的共同祖先之后的修改，然后把它们在master分支上重放一遍。
+```
+  $ git checkout master
+  $ git merge client
+```
+接下来决定将server分支中的修改也整合进来。使用git rebase [basebranch] [topicbranch]命令可以直接将特性分支(即本例中的server)变基到目标分支(即master)上。这样能省去你先切换到server分支，再对其执行变基命令的多个步骤。
+```
+  $ git rebase master server
+```
+然后可以快进合并主分支master了：
+```
+  $ git checkout master
+  $ git merge server
+```
+### 变基的风险
+#### 不要对在你的仓库外有副本的分支执行变基
+变基操作的实质是丢弃一些现有的提交，然后相应地新建一些内容一样但实际上不同的提交。如果你已将提交推送至某个仓库，而其他人也已经从该仓库拉取提交并进行了后续工作，此时，如果用git rebase命令重新整理了提交并再次推送，你的同伴因此将不得不再次将他们手头的工作与你的提交进行整合，如果接下来你还要拉取并整合他们修改过的提交，事情会变得一团糟。
+### 用变基解决变基
+如果团队中的某人强制推送并覆盖了一些你所基于的提交，你需要做的是检查你做了哪些修改，以及他们覆盖了哪些修改。  
+实际上，Git除了对整个提交计算SHA-1校验和以外，也对本次提交所引入的修改计算了校验和--即"patch-id"。如果你拉取被覆盖过的更新并将你手头的工作基于此进行变基的话，一般情况下Git都能成功分辨出哪些是你的修改，并把它们应用到新分支上。如：  
+有人推送了经过变基的提交，并丢弃了你的本地开发所基于的一些提交这种情况，如果我们不是执行合并，而是执行git rebase teamone/master，Git将会：  
+* 检查哪些提交是我们的分支上独有的(C2,C3,C4,C6,C7)
+* 检查其中哪些提交不是合并操作的结果(C2,C3,C4)
+* 检查哪些提交在对方覆盖更新时并没有被纳入目标分支(只有C2和C3,因为C4其实就是C4')
+* 把查到的这些提交应用在teamone/master上面  
+从而我们将得到``与你将相同的内容又合并了一次，生产了一个新的提交``中不同的结果。要想上述方案有效，还需要对方在变基时确保C4'和C4是几乎一样的。在本例中，可以使用git pull --rebase直接合并。  
+只要你把变基命令当作是在推送前清理提交使之整洁的工具，并只在从未推送至共用仓库的提交上执行变基命令，就不会有事。
+### 变基 vs 合并
+有一种观点认为，仓库的提交历史即是记录实际发生过什么。它是针对历史的文档，本身就有价值，不能乱改。  
+另一种观点认为，提交历史是项目过程中发生的事。软件维护手册也是需要反复修订才能方便使用。
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
