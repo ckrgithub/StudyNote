@@ -1008,28 +1008,47 @@ Git可以使用四种主要的协议来传输资料：本地协议(Local),HTTP�
 通常共享文件系统比较难配置，并比起基本的网络连接访问，这不方便从多个位置访问。如果想从家里推送内容，必须先挂载一个远程磁盘，相比网络连接的访问方式，配置不方便，速度也慢。  
 这个协议并不保护仓库避免意外的损坏。每个用户都有"远程"目录的完整shell权限，没有方法可以阻止他们修改或删除Git内部文件和损坏仓库。
 ### HTTP协议
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+Git通过HTTP通信有两种模式。
+#### 智能Http协议
+智能Http协议的运行方式和SSH及Git协议类似，只是运行在标准的Http/S端口上并可以使用各种Http验证机制。类似Github的服务，在网页上看到url(如：https://github.com/ckrgithub/StudyNote),和你在clone、push时使用一样。
+### 哑Http协议
+哑http协议里web服务器仅把裸版本库当作普通文件来对待，提供文件服务。基本上，只需要把一个裸版本库放在http根目录，设置一个叫做post-update的挂钩就可以。
+```
+ $ cd /var/www/htdocs/
+ $ git clone --bare /path/to/git_project gitproject.git
+ $ cd gitproject.git
+ $ mv hooks/post-update.sample hooks/post-update
+ $ chmod a+x hooks/post-update
+```
+Git自带post-update挂钩会默认执行合适的命令，来确保通过http的获取和克隆操作正常工作。这条命令会在你通过SSH向版本库推送之后被执行；然后别人就可以通过类似下面的命令来clone:
+```
+ $ git clone https://example.com/gitproject.git
+```
+### SSH协议
+架设Git服务器时常用SSH协议作为传输协议。SSH协议是一个验证授权的网络协议；通过SSH协议clone版本库：
+```
+ $ git clone ssh://user@server/project.git
+```
+### Git协议
+Git里有一个特殊的守护进程；它监听在一个特定的端口(9418),类似于SSH服务，但访问无需任何授权。要让版本库支持Git协议，需要先创建一个git-daemon-export-ok文件--它是Git协议守护进程为这个版本库提供服务的必要条件
+## 在服务器上搭建Git
+在开始架设Git服务器前，需要把现有仓库导出为裸仓库--即一个不包含当前工作目录的仓库。为了通过clone你的仓库来创建一个新的裸仓库，你需要在clone命令加上'--bare'选项
+```
+ $ git clone --bare my_project my_project.git
+ Clonig into bare repository 'my_project.git'...
+ done.
+```
+### 把裸仓库放到服务器上
+假设一个域名为git.example.com的服务器已经架设好，并可通过SSH连接，你想把所有Git仓库放在/opt/git目录下。假设服务器上存在/opt/git/目录，可以通过命令复制你的裸仓库来创建一个新仓库：
+```
+ $ scp -r my_project.git user@git.example.com:/opt/git
+```
+此时，其他通过SSH连接这台服务器并对/opt/git目录拥有可读权限的使用者。
+```
+ $ git clone user@git.example.com:/opt/git/my_project.git
+```
+# GitLab
+## 安装
 
 
 
