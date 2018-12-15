@@ -1,8 +1,8 @@
 # UML
-Unified Modeling Language(UML)又称**统一建模语言**或**标准建模语言**，是始于1997年一个OMG标准，它是一个支持模型化和软件系统开发的图形化语言，为软件开发的所有阶段提供模型化和可视化支持，包括由需求分析到规格，到结构和配置 。  
+Unified Modeling Language(**UML**)又称**统一建模语言**或**标准建模语言**，是始于1997年一个OMG标准，它是一个支持模型化和软件系统开发的图形化语言，为软件开发的所有阶段提供模型化和可视化支持，包括由需求分析到规格，到结构和配置 。  
 OMG：对象管理组织(Object Management Group)  
 UML由3个要素构成：UML的基本构造块、支配这些构造块如何放置在一起的规则和运用于整个语言的公用机制。  
-UML有3种基本的构造块：事物、关系和图。
+**UML有3种基本的构造块：事物、关系和图。**
 * 事物：对模型中最具有代表性的成分的抽象，包括**结构事物**，如：类(class)、接口(interface)、协作(Collaboration)、用例(UseCase)、主动类(ActiveClass)、组件(Component)和节点(Node);**行为事物**，如交互(Interaction)、态机(Statemachine)、分组事物(包，Package)、注释事物(注解，Note).
 * 关系：用来把事物结合在一起，包括：依赖、关联、泛化和实现关系
 * 图：UML中有九种建模图形，即：**用例图、类图、对象图、顺序图、协作图、状态图、活动图、组件图、配置图**
@@ -47,21 +47,21 @@ UML类的符号是一个被划分成三块的方框：类名、属性、操作�
 ![](https://upload-images.jianshu.io/upload_images/7396903-a08f01263785bfa8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/643/format/webp)
 # 类图
 ![](https://upload-images.jianshu.io/upload_images/7396903-49663f3f75398068.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/322/format/webp)  
-* 泛化(generalization):是一种继承关系，表示一般与特殊的关系，它指定了子类如何特化父类的所有特征和行为。例如：人是动物的一种，即有人的特性也有动物的共性。**箭头指向：**带三角箭头的实线，箭头指向父类  
+* **泛化(generalization):是一种继承关系，表示一般与特殊的关系，它指定了子类如何特化父类的所有特征和行为**。例如：人是动物的一种，即有人的特性也有动物的共性。**箭头指向：**带三角箭头的实线，箭头指向父类  
 ![](https://upload-images.jianshu.io/upload_images/1870963-4840160012cd55ab.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/280/format/webp)  
-* 实现(Realization):是一种类与接口的关系，表示类是接口所有特征和行为的实现。**箭头指向：**带三角箭头的虚线，箭头指向接口  
+* **实现(Realization):是一种类与接口的关系，表示类是接口所有特征和行为的实现**。**箭头指向：**带三角箭头的虚线，箭头指向接口  
 ![](https://upload-images.jianshu.io/upload_images/1870963-bcbcba9d8f78798b.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/316/format/webp)  
-* 关联(Association):是一种拥有的关系，它使一个类知道另一个类的属性和方法；如：老师与学生，关联可以是双向的，也可以是单向的。  
+* **关联(Association):是一种拥有的关系，它使一个类知道另一个类的属性和方法**；如：老师与学生，关联可以是双向的，也可以是单向的。  
 双向的关联可以有两个箭头或没有箭头，单向的关联有一个箭头。**代码体现：**成员变量。**箭头及指向：**带普通箭头的实心线，指向被拥有者
 ![](https://upload-images.jianshu.io/upload_images/1870963-8a875f7f369e5f07.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/924/format/webp)  
 **特殊情况：自身关联**
 ![](https://upload-images.jianshu.io/upload_images/1870963-14ef95a35f2b62c7.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/608/format/webp)  
-* 聚合(Aggregation):聚合是整体与部分的关系，且部分可以离开整体而单独存在。如：车和轮胎是整体和部分的关系，轮胎离开车任然可以存在。  
+* **聚合(Aggregation):聚合是整体与部分的关系，且部分可以离开整体而单独存在**。如：车和轮胎是整体和部分的关系，轮胎离开车任然可以存在。  
 聚合关系是关联关系的一种，是强的关联关系；**代码体现：**成员变量。**箭头及指向：**带空心菱形的实心线，菱形指向整体  
 ![](https://upload-images.jianshu.io/upload_images/1870963-f9e35536e6b46d2e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/382/format/webp)  
-* 组合(Composition)：是整体与部分的关系，但部分不能离开整体而单独存在。如：公司和部门，没有公司就不存在部门。**代码体现：**成员变量。**箭头及指向：**带实心菱形的实线，菱形指向整体  
+* **组合(Composition)：是整体与部分的关系，但部分不能离开整体而单独存在**。如：公司和部门，没有公司就不存在部门。**代码体现：**成员变量。**箭头及指向：**带实心菱形的实线，菱形指向整体  
 ![](https://upload-images.jianshu.io/upload_images/1870963-6a11714f5dbbd22b.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/256/format/webp)  
-* 依赖(Dependency)：是一种使用的关系，即一个类的实现需要另一个类的协助。**代码表现：**局部变量、方法的参数或对静态方法的调用。**箭头及指向：**带箭头的虚线，指向被使用者  
+* **依赖(Dependency)：是一种使用的关系，即一个类的实现需要另一个类的协助**。**代码表现：**局部变量、方法的参数或对静态方法的调用。**箭头及指向：**带箭头的虚线，指向被使用者  
 ![](https://upload-images.jianshu.io/upload_images/1870963-4d1a07e4b0eb70df.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/252/format/webp)  
 **各种关系的强弱顺序：** 泛化=实现>组合>聚合>关联>依赖
 ## 类与类之间的关系及表示方式
@@ -69,7 +69,7 @@ UML类的符号是一个被划分成三块的方框：类名、属性、操作�
 ![](https://img-blog.csdn.net/20130521213325997)
 
 ### 1.依赖关系(Dependency)
-单向，表示一个类依赖于另一个类的定义，其中一个类的变化将影响另外一个类，是一种"use a"关系。如果A依赖于B，则B表现为A的局部变量、方法参数、静态方法调用等。
+单向，表示一个类依赖于另一个类的定义，其中一个类的变化将影响另外一个类，**是一种"use a"关系**。如果A依赖于B，则B表现为A的局部变量、方法参数、静态方法调用等。
 ```java
   public class Person {
     public void doDriving(){
@@ -87,7 +87,7 @@ UML类的符号是一个被划分成三块的方框：类名、属性、操作�
   }
 ```
 ### 2.关联关系(Association)
-单向或双向(通常我们需要避免使用双向关联关系)，是一种"has a"关系。如果A单向关联B，则可以说A has a B,通常表现为全局变量
+单向或双向(通常我们需要避免使用双向关联关系)，**是一种"has a"关系**。如果A单向关联B，则可以说A has a B,通常表现为全局变量
 ```java
   public class Person {
     public Phone phone;
@@ -103,7 +103,7 @@ UML类的符号是一个被划分成三块的方框：类名、属性、操作�
 ```
 ### 3.聚合关系(Aggregation)
 单向，关联关系的一种，与关联关系之间的区别是语义上的，关联的两个对象通常是平等的，聚合则一般不平等，有一种整体和局部的感觉。
-Class由Student组成，其生命周期不同，整体不存在了，部分依然存在；Team解散了，人还在，还可以加入别的组。
+Class由Student组成，其生命周期不同，**整体不存在了，部分依然存在**；Team解散了，人还在，还可以加入别的组。
 ```java
   public class Team {
     public Person person;
@@ -114,7 +114,7 @@ Class由Student组成，其生命周期不同，整体不存在了，部分依�
   }
 ```
 ### 4.组合关系(Composition)
-单向，是一种强依赖的特殊聚合关系。Head、Body、Arm和Leg组合成People,其生命周期相同，如果整体不存在了，部分也将消亡
+单向，是一种强依赖的特殊聚合关系。Head、Body、Arm和Leg组合成People,其生命周期相同，**如果整体不存在了，部分也将消亡**
 ```java
   public class Person{
     public Head head;
