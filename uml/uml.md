@@ -142,6 +142,6 @@ Class由Student组成，其生命周期不同，**整体不存在了，部分依
 
 
 # 感谢
-![类图及绘制工具：StarUML](https://www.jianshu.com/p/617f6f413452)
-![UML与StarUML使用](https://www.jianshu.com/p/abe2df1b96cf)
+[类图及绘制工具：StarUML](https://www.jianshu.com/p/617f6f413452)
+[UML与StarUML使用](https://www.jianshu.com/p/abe2df1b96cf)
 
