@@ -35,8 +35,8 @@ UML类的符号是一个被划分成三块的方框：类名、属性、操作�
 也是互动的图表。它们像序列图一样也传递相同的信息，但它们不关心什么时候消息被传递，只关心对象的角色。
 ![](https://upload-images.jianshu.io/upload_images/7396903-263fb948400a309d.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/658/format/webp)
 ### 状态图
-对象拥有行为和状态。对象的状态是由对象当前的行动和条件决定的。状态图显示出对象可能的状态以及由状态改变而导致的转移。
-![](https://upload-images.jianshu.io/upload_images/7396903-300d6907aefeef71.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/551/format/webp)  ![](https://upload-images.jianshu.io/upload_images/7396903-b2910c8346ae067d.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/630/format/webp)
+对象拥有行为和状态。对象的状态是由对象当前的行动和条件决定的。状态图显示出对象可能的状态以及由状态改变而导致的转移。  
+![](https://upload-images.jianshu.io/upload_images/7396903-300d6907aefeef71.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/551/format/webp)  ![](https://upload-images.jianshu.io/upload_images/7396903-b2910c8346ae067d.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/630/format/webp)  ![](https://images.cnblogs.com/cnblogs_com/TerryFeng/WindowsLiveWriter/UML_E4FF/image_thumb_5.png)
 ### 活动图
 是一种很特别的流程图。活动图和状态图之间是有关系的。状态图把焦点集中在过程中的对象上，而活动图则集中在一个单独过程动作流程。
 ![](https://upload-images.jianshu.io/upload_images/7396903-86a8131120c6e419.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/655/format/webp)
@@ -142,6 +142,7 @@ Class由Student组成，其生命周期不同，**整体不存在了，部分依
 
 
 # 感谢
-[类图及绘制工具：StarUML](https://www.jianshu.com/p/617f6f413452)
-[UML与StarUML使用](https://www.jianshu.com/p/abe2df1b96cf)
+[类图及绘制工具：StarUML](https://www.jianshu.com/p/617f6f413452)  
+[UML与StarUML使用](https://www.jianshu.com/p/abe2df1b96cf)  
+[UML-状态图](https://www.cnblogs.com/sura/archive/2012/07/01/2572083.html)
 
