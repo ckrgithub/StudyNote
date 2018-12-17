@@ -1049,9 +1049,12 @@ Git里有一个特殊的守护进程；它监听在一个特定的端口(9418),�
 ```
 # GitLab
 ## 安装
-
-
-
+Gitlab是一个数据库支持的web应用。为了更快速的启动和运行，你可以下载虚拟机镜像或者在[这里](https://bitnami.com/stack/gitlab)上获取一键安装包，同时调整配置使之符合你特定的环境。可以在Gitlab社区版的[readme](https://gitlab.com/gitlab-org/gitlab-cd/tree/master)找到安装Gitlab的帮助。
+## 管理
+Gitlab的管理界面使通过网络进入的。将你的浏览器转到已经安装Gitlab的主机名或IP地址，然后以管理员身份登录即可。
+### 使用者
+Gitlab上的用户指的是对应协作者的账号。每一个用户账号都有一个**命名空间**,即该用户项目的逻辑集合。如果一个叫ckr的用户拥有一个名称是StudyNote的项目，那么这个项目的url会是http://server/ckr/StudyNote.  
+移除一个用户有两种方法。"屏蔽(Blocking)"一个用户阻止他登录Gitlab实例，但该用户命名空间下的所有数据任然会被保存。"销毁(Destroying)"一个用户，会彻底的将他从数据库和文件系统中移除。他命名下的所有项目和数据都会被删除，拥有的任何组也会被移除。
 
 
 
