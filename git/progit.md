@@ -1074,19 +1074,84 @@ git允许多个远程仓库存在：每个开发者拥有自己仓库的写权�
 ### 提交准则
 git diff --check:检查空白错误(空白错误：指行尾的空格、tab制表符，和行首空格跟tab制表符)
 如果其中一些改动修改了同一个文件，尝试使用git add --patch来部分暂存文件。
-### 在特性分支中工作
-
-
-
-
-
-
-
-
-
-
-
-
+# 变基与拣选工作流
+为了保持线性的提交历史，有些维护者喜欢在master分支上对贡献过来的工作进行变基和拣选，而不是直接将其合并。当你完成某个特性分支中的工作，并决定要将其整合的时候，你可以在该分支中运行变基命令，在当前master分支(或develop等分支)的基础上重新构造修改。另一种：将引入的工作转移到其他分支的方法是拣选。Git中拣选类似于对特定的某次提交的变基。它会提取该提交的补丁，之后尝试将其重新应用到当前分支上。
+```
+ $ git cherry-pick commitId //拉取某个commit到当前分支
+```
+# 为发布打标签
+```
+ $ git tag -s v1.5 -m 'my signed 1.5 tag'
+```
+准备一次发布：使用git archive为那些不使用Git的人员创建一个最新的快照归档
+```
+ $ git archive master --prefix='project/' | gzip > 'git describe master'.tar.gz
+ 或
+ $ git archive master --prefix='project/' --format=zip > 'git describe master'.zip
+```
+# 制作提交简报
+git shortlog:可以快速生成一份包含从上次发布之后项目新增内容的修改日志类文档。它会对你给定范围内的所有提交进行总结：
+```
+ $ git shortlog --no-merges master --not v1.0.1
+``
+# GitHub
+## 派生(Fork)项目
+如果你想要参与某个项目，但没有推送权限，这时可以对这个项目进行'派生'。派生意思是github将在你的空间中创建一个完全属于你的项目副本，且你对其具有推送权限。通过这种方式将修改推送到派生出的项目副本，并通过创建合并请求(Pull Request)来让改动进入源版本库。  
+## Markdown
+任务列表
+```
+ - [x] 编写代码
+ - [ ] 编写单元测试
+ - [ ] 编写文档
+```
+摘录代码：使用'反引号'
+```java
+ for(int i=0;i<3;i++){
+ 
+ }
+```
+引用：使用>符号
+```
+ > Whether 'tis Nobler in the mind to suffer'
+ > The Slings and Arrows of outrageous Fortune
+```
+表情符号：使用:开头
+```
+ :<表情名称>:
+```
+# Git工具
+## 选择修订版本
+### 简短的SHA-1
+Git十分智能，只需要提供SHA-1的前几个字符就可以获得对应的那次提交，当然提供的SHA-1字符数量不少于4个。
+**git log**命名查看之前新增一个功能的那次提交
+```
+ $ git log
+ commit 734713b...
+ Author: <ckr@gmail.com>
+ Date: 2019.01.20
+   fixed a bug
+ commit d921970...
+ Merge: 1c002d...
+ Author: <ckr@gmail.com>
+ Date: 2019.01.20
+   merge commit 'add unit test'
+ commit 1c002dd...
+ Author: <ckr@gmail.com>
+ Date: 2019.01.20
+   add readme.md
+```
+假设这个提交是1c002d...,如果想git show这个提交
+```
+ $ git show 1c002d
+```
+使用**git log --abbrev-commit**参数，输出结果里会显示简短且唯一的值
+```
+ $ git log --abbrev-commit --pretty=oneline
+ 734713b fixed a bug
+ d921970 merge commit 'add unit test'
+ 1c002dd add readme.md
+```
+### 分支引用
 
 
 
