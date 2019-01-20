@@ -1152,6 +1152,144 @@ Git十分智能，只需要提供SHA-1的前几个字符就可以获得对应的
  1c002dd add readme.md
 ```
 ### 分支引用
+指明一次提交最直接的方法是有一个指向它的分支引用。
+* 引用日志：当你在工作时，git会在后台保存一个引用日志(reflog)，引用日志记录了最近几个月你的HEAD和分支引用所指向的历史。
+```
+ $ git reflog
+ 734713b HEAD@{0}: commit: fixed refs handling, added gc auto, updated
+ d921970 HEAD@{1}: merge phedders/rdocs: Merge made by recursive.
+ 1c002dd HEAD@{2}: commit: added some blame and merge stuff
+ 1c36188 HEAD@{3}: rebase -i (squash): updating HEAD
+ 95df984 HEAD@{4}: commit: # This is a combination of two commits.
+ 1c36188 HEAD@{5}: rebase -i (squash): updating HEAD
+ 7e05da5 HEAD@{6}: rebase -i (pick): updating HE
+```
+每当你的HEAD所指向的位置发生了变化，Git就会将这个信息存储到引用日志这个历史记录里。如果你想要查看仓库中HEAD在五次前的所指向的提交，你可以使用@{n}来引用reflog中输出的提交记录。
+```
+ $ git show HEAD@{5}
+```
+你同样可以使用这个语法来查看某个分支在一定时间前的位置。如：查看你的master分支在昨天时候指向了哪个提交
+```
+ $ git show master@{yesterday}
+```
+注意，引用日志只存在于本地仓库，一个记录你在你自己的仓库里做过什么的日志。
+* 祖先引用：是另一种指明一个提交的方式。如果在引用的尾部加上一个^，git会将其解析为该引用的上一个提交。
+```
+ $ git log --pretty=format:'%h %s' --graph
+ * 734713b fixed refs handling, added gc auto, updated tests
+ * d921970 Merge commit 'phedders/rdocs'
+ |\
+ | * 35cfb2b Some rdoc changes
+ * | 1c002dd added some blame and merge stuff
+ |/
+ * 1c36188 ignore *.gem
+ * 9b29157 add open3_detach to gemspec file list
+ 
+ $ git show HEAD^
+ commit d921970aadf03b3cf0e71becdaab3147ba71cdef
+ Merge: 1c002dd... 35cfb2b...
+ Author: Scott Chacon <schacon@gmail.com>
+ Date: Thu Dec 11 15:08:43 2008 -0800
+  Merge commit 'phedders/rdocs'
+```
+另一种指明祖先提交的方法是~。同样是指向第一父提交，因此HEAD~和HEAD^是等价的。而区别在于你后面加数字的时候。HEAD~2代表"第一父提交的第一父提交"
+### 提交区间
+* 双点：想要查看develop分支中还有哪些提交尚未被合并入master分支。可以使用master..develop来让git显示这些提交。也就是在develop分支中而不是在master分支中的提交。
+```
+ $ git log master..develop
+```
+* 多点：查看哪些提交是被包含在某些分支中的一个，但不在你当前的分支上。
+```
+ $ git log refA..refB
+ $ git log ^refA refB
+ $ git log refB --not refA
+```
+* 三点：可以选择出被两个引用中的一个包含但又不被两者同时包含的提交。
+```
+ $ git log master...develop
+```
+### 交互式暂存
+git add -i:git会进入一个交互式终端模式
+### 储藏工作
+git status:查看状态
+```
+ $ git status
+ Changes to be committed:
+  (use "git reset HEAD <file>..." to unstage)
+  modified: index.html
+ Changes not staged for commit:
+  (use "git add <file>..." to update what will be committed)
+  (use "git checkout -- <file>..." to discard changes in working
+directory)
+  modified: lib/simplegit.rb
+```
+现在想要切换分支，但还不想要提交之前的工作；所以储藏修改。运行git stash或git stash save
+```
+ $ git stash
+ Saved working directory and index state \
+  "WIP on master: 049d078 added the index file"
+HEAD is now at 049d078 added the index file
+(To restore them type "git stash apply")
+```
+查看储藏，可以使用git stash list:
+```
+ $ git stash list
+ stash@{0}: WIP on master: 049d078 added the index file
+ stash@{1}: WIP on master: c264051 Revert "added file_size"
+ stash@{2}: WIP on master: 21d80a5 added number to log
+```
+想要应用其中一个更旧的储藏，可以通过名字指定它，如：git stash apply stash@{2}。如果不指定一个储藏，git认为指定的是最近的储藏
+```
+ $ git stash apply
+ # On branch master
+ # Changed but not updated:
+ # (use "git add <file>..." to update what will be committed)
+ #
+ # modified: index.html
+ # modified: lib/simplegit.rb
+ #
+```
+### 创造性的储藏
+stash save命令的--keep-index选项:当你做了几个改动并只想提交其中的一部分，过一会再回来处理剩余改动
+```
+ $ git status -s
+ M index.html
+  M lib/simplegit.rb
+ $ git stash --keep-index
+ Saved working directory and index state WIP on master: 1b65b17 added the
+ index file
+ HEAD is now at 1b65b17 added the index file
+ 
+ $ git status -s
+ M index.html
+```
+另一个经常使用储藏来做的事是储藏未跟踪文件。默认情况下，git stash只会储藏已经在索引中的文件。如果指定--include-untracked或-u标记，git也会储藏任何创建的未跟踪文件
+```
+ $ git status -s
+ M index.html
+  M lib/simplegit.rb
+ ?? new-file.txt
+ $ git stash -u
+ Saved working directory and index state WIP on master: 1b65b17 added the
+ index file
+ HEAD is now at 1b65b17 added the index file
+```
+### 从储藏创建一个分支
+如果储藏了一些工作，将它留在那儿，然后继续在储藏的分支上工作，在重新应用工作时可能会有问题。可以运行git stash branch 创建一个新分支，检出储藏工作时所在的提交，重新在那应用工作。
+### 清理工作目录
+git clean:去除冗余文件或清理工作目录。  
+git clean -f-d:移除工作目录中所有未追踪的文件及空的子目录。  
+git clean -d -n:做一次演习
+```
+ $ git clean -d -n
+ Would remove test.o
+ Would remove tmp/
+```
+# 签署工作
+
+
+
+
 
 
 
