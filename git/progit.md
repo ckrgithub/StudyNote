@@ -1286,6 +1286,184 @@ git clean -d -n:做一次演习
  Would remove tmp/
 ```
 # 签署工作
+## GPG介绍
+首先，在开始签名之前你需要先配置GPG并安装个人密钥。
+```
+ $ gpg --list-keys
+ /Users/schacon/.gnupg/pubring.gpg
+ ---------------------------------
+ pub 2048R/0A46826A 2014-06-04
+ uid Scott Chacon (Git signing key) <schacon@gmail.com>
+ sub 2048R/874529A9 2014-06-04
+```
+如果你还没有安装一个密钥，可以使用gpg --gen-key生成一个
+一旦你有一个可以签署的私钥，可以通过设置Git的user.signingkey选项来签署
+```
+  git config --global user.signingkey 0A46826A
+```
+## 签署标签
+如果已设置好一个GPG私钥，可以使用它来签署新的标签。所需要做的只是使用-s代替-a即可：
+```
+ $ git tag -s v1.5 -m 'my signed 1.5 tag'
+ You need a passphrase to unlock the secret key for
+ user: "Ben Straub <ben@straub.cc>"
+ 2048-bit RSA key, ID 800430EB, created 2014-05-04
+```
+# 搜索
+## git grep
+可以很方便地从提交历史或工作目录中查找一个字符串或者正则表达式。可以传入-n参数来输出git所找到的匹配行行号
+```
+ $ git grep -n gmtime_r
+ compat/gmtime.c:3:#undef gmtime_r
+ compat/gmtime.c:8: return git_gmtime_r(timep, &result);
+ compat/gmtime.c:11:struct tm *git_gmtime_r(const time_t *timep, struct tm
+ *result)
+ compat/gmtime.c:16: ret = gmtime_r(timep, result);
+ compat/mingw.c:606:struct tm *gmtime_r(const time_t *timep, struct tm
+ *result)
+ compat/mingw.h:162:struct tm *gmtime_r(const time_t *timep, struct tm
+ *result);
+ date.c:429: if (gmtime_r(&now, &now_tm))
+ date.c:492: if (gmtime_r(&time, tm)) {
+ git-compat-util.h:721:struct tm *git_gmtime_r(const time_t *, struct tm
+ *);
+ git-compat-util.h:723:#define gmtime_r git_gmtime_r
+```
+使用--count选项来使git输出概述的信息，仅仅包括哪些文件包含匹配以及每个文件包含了多少个匹配
+```
+ $ git grep --count gmtime_r
+ compat/gmtime.c:4
+ compat/mingw.c:1
+ compat/mingw.h:1
+ date.c:2
+ git-compat-util.h:2
+```
+# Git日志搜索
+我们想找到ZLIB_BUF_MAX常量是什么时候引入的，可以使用**-S** 选项来显示**新增和删除该字符串**的提交。
+```
+ $ git log -SZLIB_BUF_MAX --online
+ e01503b zlib: allow feeding more than 4GB in one go
+ ef49a7a zlib: zlib can only process 4GB at a time
+```
+如果我们查看这些提交的diff,可以看到ef49a7a这个提交引入了常量，并在e01503b这个提交中被修改。
+## 行日志搜索
+行日志搜索是另一个相当高级并有用的日志搜索功能。  
+**git log -L**：可以展示代码中一行或者一个函数的历史。
+查看zlib.c文件中'git_deflate_bound'函数的每一次变更。git会尝试找出这个函数的范围，然后查找历史记录，并显示从函数创建之后一系列变更对应的补丁。
+```
+ $ git log -L :git_deflate_bound:zlib.c
+ commit ef49a7a0126d64359c974b4b3b71d7ad42ee3bca
+ Author: Junio C Hamano <gitster@pobox.com>
+ Date: Fri Jun 10 11:52:15 2011 -0700
+   zlib: zlib can only process 4GB at a time
+ diff --git a/zlib.c b/zlib.c
+ --- a/zlib.c
+ +++ b/zlib.c
+ @@ -85,5 +130,5 @@
+ -unsigned long git_deflate_bound(z_streamp strm, unsigned long size)
+ +unsigned long git_deflate_bound(git_zstream *strm, unsigned long size)
+  {
+ - return deflateBound(strm, size);
+ + return deflateBound(&strm->z, size);
+ }
+```
+# 重写历史
+## 修改最后一次提交
+修改最近一次提交可能是所有修改历史提交的操作中最常见的一个。对于你最近一次提交，往往想做两件事：修改提交信息，或者修改你添加、修改和移除的文件的快照
+```
+ $ git commit --amend
+```
+这会把你带入文本编辑器，里面包含了你最近一条提交信息，供你修改。当保存并关闭编辑器后，编辑器将会用你输入的内容替换最近一条提交信息。  
+如果你已完成提交，又因为之前提交时忘记添加一个新创建的文件，想通过添加或修改文件来更改提交的快照。通过修改文件然后运行git add或git rm一个已追踪的文件，随后运行git commit --amend拿走当前的暂存区域并使其作为新的提交的快照。
+## 修改多个提交信息
+通过**git rebase -i**来交互式地运行变基。例如，如果想要修改最近三次提交信息，或那组提交中的任意一个提交信息，将想要修改的最近一次提交的父提交作为参数传递给git rebase -i命令，即HEAD~3.记住~3比较容易，因为你正尝试修改最后三次提交；但注意实际上指定了以前的四次提交，即想要修改提交的父提交：
+```
+ $ git rebase -i HEAD~3
+```
+再次记住这是一个变基命令：在HEAD~3..HEAD范围内的每一个提交都会被重写，无论你是否修改信息。
+## 重新排序提交
+也可以使用交互式变基来重新排序或完全移除提交。如果想要移除"added cat-file"提交然后修改另外两个提交引入的顺序：
+```
+ pick f7f3f6d changed my name a bit
+ pick 310154e updated README formatting and added blame
+ pick a5f4a0d added cat-file
+```
+改为：
+```
+ pick 310154e updated README formatting and added blame
+ pick f7f3f6d changed my name a bit
+```
+保存并退出编辑器时，git将你的分支带回这些提交的父提交。
+## 压缩提交
+将一连串提交压缩成一个单独的提交。指定"squash"而不是"pick"或"edit"，git将应用两者的修改并合并提交信息在一起。
+```
+ pick f7f3f6d changed my name a bit
+ squash 310154e updated README formatting and added blame
+ squash a5f4a0d added cat-file
+```
+保存并退出编辑器时，git应用所有的三次修改然后将你放到编辑器中来合并三次提交。
+## 拆分提交
+拆分一个提交会撤销这个提交，然后多次地部分地暂存与提交直到完成你所需要次数的提交。想要将它拆分为两次提交：第一个"updated README formatting",第二个"add blame"来代替原来的"updated README formatting and added blame"。可以通过修改rebase -i的脚本：
+```
+ pick f7f3f6d changed my name a bit
+ edit 310154e updated README formatting and added blame
+ pick a5f4a0d added cat-file
+```
+当脚本将你进入到命令行时，重置那个提交，拿到被重置的修改，从中创建几次提交。当保存并退出编辑器时，Git带你到列表中第一个提交的父提交，应用第一个提交(f7f3f6d),应用第二个提交(310154e)，然后让你进入命令行。可以通过git reset HEAD^做一次针对那个提交的混合重置，实际上将会撤销那次提交并将修改的文件未暂存。
+```
+ $ git reset HEAD^
+ $ git add README
+ $ git commit -m 'updated README formatting'
+ $ git add lib/simplegit.rb
+ $ git commit -m 'added blame'
+ $ git rebase --continue
+```
+## 核武器级选项：filter-branch
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
