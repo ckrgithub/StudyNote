@@ -1419,14 +1419,76 @@ git clean -d -n:做一次演习
  $ git rebase --continue
 ```
 ## 核武器级选项：filter-branch
-
-
-
-
-
-
-
-
+filter-branch:可以改写历史中大量的提交。
+### 从每一个提交移除一个文件
+为了从整个提交历史中移除一个叫做passwords.txt文件，可以使用--tree-filter选项：
+```
+ $ git filter-branch --tree-filter 'rm -f passwords.txt' HEAD
+ Rewrite 6b9b3cf04e7c5686a9cb838c3f36a8cb6a0fc2bd (21/21)
+ Ref 'refs/heads/master' was rewritten
+```
+--tree-filter选项在检出项目的每一个提交后，运行指定的命令然后重新提交结果。在本例中，你从每一个快照中移除了一个叫做passwords.txt的文件，无论他是否存在。如果想要移除所有偶然提交的编辑器备份文件，可以运行类似**git filter-branch --tree-filter 'rm -f *~'**HEAD的命令。  
+### 使一个子目录作为新的根目录
+假设已经从另一个源代码控制系统中导入，并有几个没意义的子目录(trunk、tags等)。如果想要让trunk子目录作为每一个提交的新的项目根目录：
+```
+ $ git filter-branch --subdirectory-filter trunk HEAD
+ Rewrite 856f0bf61e41a27326cdae8f09fe708d679f596f (12/12)
+ Ref 'refs/heads/master' was rewritten
+```
+现在新项目根目录是trunk子目录。git会自动移除所有不影响子目录的提交。
+### 全局修改邮箱地址
+你想要开源一个项目并修改所有你的工作邮箱地址为你的个人邮箱地址。
+```
+ $ git filter-branch --commit-filter '
+    if [ "$GIT_AUTHOR_EMAIL" = "schacon@localhost" ];
+    then
+       GIT_AUTHOR_NAME="Ckr"
+       GIT_AUTHOR_EMAIL="ckr@github.com";
+       git commit-tree "$@";
+    else
+       git commit-tree "$@";
+    fi' HEAD
+```
+这会遍历并重写每一个提交来包含你的新邮箱地址。
+# 重置揭秘
+## 三棵树
+理解reset和checkout的最简单方法，就是以Git的思维框架(将其作为内容管理器)来管理三颗不同的树。"树"在我们这里的实际意思是"文件的集合"，而不是指特定的数据结构。
+|树|用途|
+|---|---|
+|HEAD|上一次提交的快照，下一次提交的父结点|
+|Index|预期的下一次提交的快照|
+|Working Directory|沙盒|  
+### HEAD
+HEAD是当前分支引用的指针，它总是指向该分支上的最后一次提交。这表示HEAD将是下一次提交的父结点。查看快照：
+```
+ $ git cat-file -p HEAD
+ tree cfda3bf379e4f8dba8717dee55aab78aef7f4daf
+ author Scott Chacon 1301511835 -0700
+ committer Scott Chacon 1301511835 -0700
+ initial commit
+ 
+ $ git ls-tree -r HEAD
+ 100644 blob a906cb2a4a904a152... README
+ 100644 blob 8f94139338f9404f2... Rakefile
+ 040000 tree 99f1a6d12cb4b6f19... lib
+```
+### 索引
+索引是你预期的下一次提交。我们也会将一个概念引用为Git的"暂存区域"，这就是当你运行git commit时Git看起来的样子。  
+Git将上一次检出到工作目录中的所有文件填充到索引区。
+### 工作目录
+另外两棵树以一种高效但并不直观的方式，将它们的内容存储在.git文件夹中。工作目录会将它们解包为实际的文件以便编辑。你可以把工作目录当做沙盒。
+```
+ $ tree
+ .
+ ├── README
+ ├── Rakefile
+ └── lib
+   └── simplegit.rb
+ 1 directory, 3 files
+```
+## 工作流程
+Git主要的目的是通过操纵这三棵树来以更加连续的状态记录项目的快照
+## 压缩
 
 
 
