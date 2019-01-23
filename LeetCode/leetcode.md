@@ -110,11 +110,91 @@
       return arr;
     }
   }
-
 ```
-
-
-
+## 希尔排序
+### 步骤
+* 选择一个增量序列t1,t2,...,tk,其中ti>tj,tk=1;
+* 按增量序列个数k，对序列进行k趟排序
+* 每趟排序，根据对应的增量ti，将待排序列分割成若干个长度为m的子序列，分别对各子表进行直接插入排序。仅增量因子为1时，整个序列作为一个表来处理，表长度即为整个序列的长度。
+### 参考代码
+```java
+  public class ShellSort implements IArraySort{
+    @Override
+    public int[] sort(int[] data) throws Exception{
+      int[] arr=Arrays.copyof(data,data.length);
+      int gap=1;
+      int len=arr.length;
+      //8 9 1 7 2 3 5 4 6 0
+      //2 3 1 4 8 9 5 7 6 0
+      //2 3 1 4 6 9 5 7 8 0
+      //0 3 1 4 6 2 5 7 8 9
+      while(gap<len){
+        gap=gap*3+1
+      }
+      while(gap>0){
+        for(int i= gap;i<len;i++){
+          int tmp=arr[i];
+          int j=i-gap;// 4 5 6 7 8 9
+          while(j>=0&&arr[j]>tmp){
+            arr[j+gap]=arr[j];
+            j-=gap;
+          }
+          arr[j+gap]=tmp;
+        }
+        gap=(int)Math.floor(gap/3);
+      }
+      return arr;
+    }
+  }
+```
+## 归并排序
+### 步骤
+* 申请空间，使其大小为两个已经排序序列之和，该空间用来存放合并后的序列
+* 设定两个指针，最初位置分别为两个已经排序序列的起始位置
+* 比较两个指针所指向的元素，选择相对小的元素放入到合并空间，并移动指针到下一位置
+* 重复步骤3直到某一指针达到序列尾
+* 将另一个序列剩下的所有元素直接复制到合并序列尾
+### 参考代码
+```java
+  public class MergeSort implements IArraySort{
+    @Override
+    public int[] sort(int[] data)throws Exception{
+      int[] arr=Arrays.copyof(data,data.length);
+      int len=arr.length;
+      if(len<2){
+        return arr;
+      }
+      //6 4 3 7 5 1 2
+      int middle=(int)Math.floor(len/2);
+      int[] left=Arrays.copyOfRange(arr,0,middle);
+      int[] right=Arrays.copyOfRange(arr,middle,arr.length);
+      return merge(sort(left),sort(right));
+    }
+    
+    protected int[] merge(int[] left,int[] right){
+      int[] result=new int[left.length+right.length];
+      int i=0;
+      while(left.length>0&&right.length>0){
+        if(left[0]<=right[0]){
+          result[i++]=left[0];
+          left=Arrays.copyOfRange(left,1,left.length);
+        }else {
+          result[i++]=right[0];
+          right=Arrays.copyOfRange(right,1,right.length);
+        }
+      }
+      while(left.length>0){
+        result[i++]=left[0];
+        left=Arrays.copyOfRange(left,1,left.length);
+      }
+      while(right.length>0){
+        result[i++]=right[0];
+        right=Arrays.copyOfRange(right,1,right.length);
+      }
+      return result;
+    }
+  }
+```
 
 # 感谢
 [五分钟学算法](https://mp.weixin.qq.com/s/vn3KiV-ez79FmbZ36SX9lg)
