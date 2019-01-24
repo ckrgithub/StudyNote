@@ -195,6 +195,117 @@
     }
   }
 ```
+## 快速排序
+### 步骤
+* 从数列中挑出一个元素，称为"基准"(pivot);
+* 重新排序数列，所有元素比基准值小的摆放在基准前面，所有元素比基准值大的摆在基准的后面(相同的数可以到任一边)。在这个分区退出之后，该基准就处于数列的中间位置。这个称为分区(partition)操作
+* 递归地把小于基准值元素的子数列和大于基准值元素的子数列排序
+### 参考代码
+```java
+  //3 5 8 1 2 9 4 7 6
+  public class QuickSort implements IArraySort{
+    @Override
+    public int[] sort(int[] data) throws Exception{
+      int[] arr=Arrays.copyof(data,data.length);
+      return quickSort(arr,0,arr.length-1);
+    }
+    
+    private int[] quickSort(int[] arr,int left,int right){
+      if(left<right){
+        int partitionIndex=partition(arr,left,right);
+        quickSort(arr,left,partitionIndex-1);
+        quickSort(arr,partitionIndex+1,right);
+      }
+      return arr;
+    }
+    private int partition(int[] arr,int left,int right){
+      //设定基准值
+      int pivot=left;//0
+      int index=pivot+1;//1
+      for(int i=index;i<=right;i++){//8
+        if(arr[i]<arr[pivot]){
+          swap(arr,i,index);
+          index++;
+        }
+      }
+      swap(arr,pivot,index-1);
+      return index-1;
+    }
+    
+    private void swap(int[] arr,int i,int j){
+      int temp=arr[i];
+      arr[i]=arr[j];
+      arr[j]=temp;
+    } 
+  }
+```
+## 堆排序
+### 步骤
+* 创建一个堆 H[0...n-1];
+* 把堆首(最大值)和堆尾互换
+* 把堆的尺寸缩小1，并调用shift_down(0),目的是把新的数组顶端数据调整到相应位置
+* 重复步骤2，直到堆的尺寸为1
+### 参考代码
+```java
+  public class HeapSort implements IArraySort{
+    @Override
+    public int[] sort(int[] data) throws Exception{
+      int[] arr=Arrays.copyof(data,data.length);
+      int len = arr.length;
+      //5 2 7 3 6 1 4
+      buildMaxHeap(arr,len);
+      for(int i=len-1;i>0;i--){
+        swap(arr,0,i);
+        len--;
+        heapify(arr,0,len);
+      }
+      return arr;
+    }
+    
+    private void buildMaxHeap(int[] arr,int len){
+      for(int i=(int)Math.floor(len/2);i>=0;i--){
+        heapify(arr,i,len);//3 7
+      }
+    }
+    
+    private void heapify(int[] arr,int i,int len){
+      int left=2*i+1;
+      int right=2*i+2;
+      int largest=i;//2
+      if(left<len&&arr[left]>arr[largest]){
+        largst=left;
+      }
+      if(right<len&&arr[right]>arr[largest]){
+        largest=right;
+      }
+      if(largest!=i){
+        swap(arr,i,largest);
+        heapify(arr,largest,len);
+      }
+    }
+    
+    private void swap(int[] arr,int i,int j){
+      int temp=arr[i];
+      arr[i]=arr[j];
+      arr[j]=temp;
+    }
+  }
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 # 感谢
 [五分钟学算法](https://mp.weixin.qq.com/s/vn3KiV-ez79FmbZ36SX9lg)
