@@ -291,10 +291,183 @@
     }
   }
 ```
-
-
-
-
+## 计数排序
+### 步骤
+* 花O(n)时间扫描一下整个序列A，获取最小值min和最大值max
+* 开辟一块新的空间创建新的数组B，长度为(max-min+1)
+* 数组B中index的元素记录的值是A中某元素出现的次数
+* 最后输出目标整数序列，具体的逻辑是遍历数组B，输出相应元素以及对应的个数
+### 参考代码
+```java
+  public class CountingSort implements IArraySort{
+    @Override
+    public int[] sort(int[] data) throws Exception{
+      int[] arr=Arrays.sort(data,data.length);
+      int maxValue=getMaxValue(arr);
+      //5 3 4 7 2 4 3 4 7
+      return countingSort(arr,maxValue);
+    }
+    
+    private int getMaxValue(int[] arr){
+      int maxValue=arr[0];
+      for(int value: arr){
+        if(maxValue<value){
+          maxValue=value;
+        }
+      }
+      return maxValue;
+    }
+    
+    private int[] countingSort(int[] arr,int maxValue){
+      int bucketLen=maxValue+1;
+      int[] bucket=new int[bucketLen];
+      for(int value:arr){//0..7
+        bucket[value]++;
+        //0 1 2 3 4 5 6 7
+        //0 0 1 2 3 1 0 2
+      }
+      int sortedIndex=0;
+      for(int j=0;j<bucketLen;j++){//2,3
+        while(bucket[j]>0){//1,2
+          arr[sortedIndex++]=j;//0,1,2
+          bucket[j]--;
+        }
+      }
+      return arr;
+    }
+    
+  }
+```
+## 桶排序
+### 步骤
+* 设置固定数量的空桶
+* 把数据放到对应的桶中
+* 对每个不为空的桶中数据进行排序
+* 拼接不为空的桶中数据，得到结果
+### 参考代码
+```java
+  //7 12 56 23 19 33 35 42 42 2 8 22 39 26 17
+  //范围(56-2+1)/5=11
+  public class BucketSort implements IArraySort{
+    private static final InsertSort insertSort=new InsertSort();
+    @Override
+    public int[] sort(int[] data) throws Exception{
+      int[] arr=Arrays.copyof(data,data.length);
+      return bucketSort(arr,5);
+    }
+    
+    private int[] bucketSort(int[] arrs,int bucketSize) throws Exception{
+      if(arr.length==0){
+        return arr;
+      }
+      int minValue=arr[0];
+      int maxValue=arr[0];
+      for(int value:arr){
+        if(value<minValue){
+          minValue=value;
+        }else if(value>maxValue){
+          maxValue=value;
+        }
+      }
+      int bucketCount=(int)Math.floor((maxValue-minValue)/bucketSize)+1;//11
+      int[][] buckets=new int[bucketCount][0];
+      //利用映射函数将数据分配到各个桶中
+      for(int i=0;i<arr.length;i++){//15
+        int index=(int)Math.floor((arr[i]-minValue)/bucketSize);
+        buckets[index]=arrAppend(buckets[index],arr[i]);
+      }
+      int arrIndex=0;
+      for(int[] bucket: buckets){
+        if(bucket.length<=0){
+          continue;
+        }
+        //对每个桶进行排序，这里使用了插入排序
+        bucket=inserSort.sort(bucket);
+        for(int value: bucket){
+          arr[arrIndex++]=value;
+        }
+      }
+      return arr;
+    }
+    /**
+    *自动扩容，并保存数据
+    */
+    private int[] arrAppend(int[] arr,int value){
+      arr=Arrays.copyof(arr,arr.length+1);
+      arr[arr.length-1]=value;
+      return arr;
+    }
+  }
+  
+```
+## 基数排序
+### 步骤
+* 将所有待比较数值(正整数)统一为同样的数位长度，数位较短的数前面补零
+* 从最低位开始，依次进行一次排序
+* 从最低位排序一直到最高位排序完成以后，数列就变成一个有序序列
+### 参考代码
+```java
+  //321 1 10 60 577 743 127
+  public class RadixSort implements IArraySort{
+    @Override
+    public int[] sort(int[] data) throws Exception{
+      int[] arr=Arrays.copyof(data,data.length);
+      int maxDigit=getMaxDigit(arr);
+      return radixSort(arr,maxDigit);
+    }
+    //获取最高位数
+    private int getMaxDigit(int[] arr){
+      int maxValue=getMaxValue(arr);
+      return getNumLength(maxValue);
+    }
+    
+    private int getMaxValue(int[] arr){
+      int maxValue=arr[0];
+      for(int value:arr){
+        if(maxValue<value){
+          maxValue=value;
+        }
+      }
+      return maxValue;
+    }
+    
+    private int getNumLength(long num){
+      if(num==0){
+        return 1;
+      }
+      int length=0;
+      for(long temp=num;temp!=0;temp/=10){
+        length++;
+      }
+      return length;
+    }
+    
+    private int[] radixSort(int[] arr,int maxDigit){
+      int mod=10;
+      int dev=1;
+      for(int i=0;i<maxDigit;i++,dev*=10,mod*=10){
+        //考虑负数的情况，这里扩展一倍队列数，其中[0-9]对应负数，[10-19]对应正数(bucket+10)
+        int[][] counter=new int[mod*2][0];
+        for(int j=0;j<arr.length;j++){
+          int bucket=((arr[j]%mod)/dev)+mod;
+          counter[bucket]=arrayAppend(counter[bucket],arr[j]);
+        }
+        int pos=0;
+        for(int[] bucket:counter){
+          for(int value:bucket){
+            arr[pos++]=value;
+          }
+        }
+      }
+      return arr;
+    }
+    private int[] arrayAppend(int[] arr,int value){
+      arr=Arrays.copyof(arr,arr.length+1);
+      arr[arr.length-1]=value;
+      return arr;
+    }
+  }
+```
 
 
 
