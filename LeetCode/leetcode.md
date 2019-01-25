@@ -468,10 +468,71 @@
     }
   }
 ```
-
-
-
-
+# Tow Sum
+```
+  给定一个整数数组和一个目标值，找出数组中和为目标值的两个数。你可以假设每个输入只对应一种答案，且同样的元素不能被重复利用。示例：
+  给定nums=[2,7,11,15],target=9,因为nums[0]+nums[1]=2+7=g,所以返回[0,1]
+```
+## 思路
+使用查找表来解决该问题
+> 设置一个map容器record用来记录元素的值与索引
+> 遍历数据nums
+>> * 每次遍历时使用临时变量complement,用来保存目标值与当前值的差值
+>> * 在此次遍历中查找record，查看是否有与complement一致的值，如果查找成功则返回查找值的索引值与当前变量的值i
+>> * 如果未找到，则在record保存该元素与索引值i
+### 参考代码
+```
+  //时间复杂度：O(n)
+  //空间复杂度：O(n)
+  class Solution{
+    public int[] towSum(int[] nums,int target){
+      int len=nums.length;
+      Map<Integer,Integer> map=new HashMap(len);
+      for(int i=0;i<len;i++){
+        int curValue=nums[i];
+        int complement=target-curValue;
+        if(map.containsKey(complement)){
+          return new int[]{i,map.get(complement)}
+        }else{
+          map.put(curValue,i);
+        }
+      }
+      throw new IllegalArgumentException("No two sum solution");
+    }
+  }
+```
+# 两个数字相加
+> 给定两个非空链表来表示两个非负整数。位数按照逆序方式存储，它们的每个节点只存储单个数字。将两数相加返回一个新的链表。
+> 你可以假设除了数字0之外，这两个数字都不会以零开头。
+> 示例：输入:(2->4->3)+(5->6->4),输出：7->0->8,结果：342+465=807
+## 思路
+设立一个表示进位的变量carried，建立一个新链表，把输入的两个链表从头往后同时处理，每两个相加，将结果加上carried后的值作为一个新节点到新链表后面。
+## 参考代码
+```java
+  public class Solution{
+    public ListNode addTowNumbers(ListNode node1,ListNode node2){
+      ListNode dummy=new ListNode(-1);
+      ListNode cur=dummy;
+      int carry=0;
+      while(node1!=null||node2!=null){
+        int num1=node1==null?0:node1.val;
+        int num2=node2==null?0:node2.val;
+        int sum=num1+num2+carry;
+        carry=sum>=10?1:0;
+        cur.next=new ListNode(sum%10);
+        cur=cur.next;
+        if(node1!=null){
+          node1=node1.next;
+        }
+        if(node2!=null){
+          node2=node2.next;
+        }
+      }
+      if(carry==1) cur.next=new ListNode(1);
+      return dummy.next;
+    }
+  }
+```
 
 
 
