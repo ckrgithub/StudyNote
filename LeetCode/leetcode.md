@@ -533,6 +533,141 @@
     }
   }
 ```
+## 无重复字符的最长字串
+> 给定一个字符串，找出不含有重复字符的最长子串的长度。
+> 示例 1：
+> 输入："abcabcbb"
+> 输出：3
+> 解析：无重复字符的最长子串是"abc"，其长度为3
+> 输入："bbbbb"
+> 输出：1
+> 解析：无重复字符的最长子串是"b",其长度为1
+> 输入："pwwkew"
+> 输出：3
+> 解析：无重复字符的最长子串是"wke",其长度为3
+> 请注意，答案必须是一个子串，"pwke"是一个子序列，而不是子串
+### 思路解析
+建立一个256位大小的整型数组freg，用来建立字符和其出现位置之间的映射。维护一个滑动窗口，窗口内的都是没有重复的字符，去尽可能的扩大窗口的大小，窗口不停的向右滑动。
+* 1.如果当前遍历到的字符从未出现过，那么直接扩大右边界
+* 2.如果当前遍历到的字符出现过，则缩小窗口(左边索引向右移动)，然后继续观察当前遍历到的字符
+* 3.重复1 2步骤，直到左边索引无法再移动
+* 4.维护一个结果res，每次用出现过的窗口大小来更新结果res，最后返回res获取结果。
+### 参考代码
+```java
+  //滑动窗口
+  //时间复杂度：O(len(s))
+  //空间复杂度：O(len(charset))
+  public class Solution{
+    publc int lengthOfLongestSubstring(String s){
+      int len = s.length(),ans=0;
+      int[] index=new int[128];//当前字符下标
+      //扩容
+      for(int j=0,i=0;j<n;j++){
+        i=Math.max(index[s.charAt(j)],i);
+        ans=Math.max(ans,j-i+1);
+        index[s.chatAt(j)]=j+1;
+      }
+      return ans;
+    }
+  }
+```
+## 删除链表的倒数第N个节点
+> 给定一个链表，删除链表的倒数第n个节点，并返回链表的头结点。
+> 示例：
+> 给定一个链表：1->2->3->4->5,和n=2。当删除了倒数第二个节点后，链表变为1->2->3->5
+> 说明：给定的n保证是有效的。
+> 进阶：你能尝试使用一趟扫描实现吗？
+### 解题思路
+我们可以设想假设设定了双指针p和q的话，当q指向末尾的Null，p与q之间相隔的元素个数为n时，那么删除掉p的下一个指针就完成要求了。
+* 设置虚拟节点dummyHead指向head
+* 设定双指针p和q，初始都指向虚拟节点dummyHead
+* 移动q，直到p与q之间相隔的元素个数为n
+* 同时移动p与q，直到q指向的为Null
+* 将p的下一个节点指向下下个节点
+### 参考代码
+```JAVA
+  public ListNode removeNthFromEnd(ListNode head,int n){
+    ListNode dummy=new ListNode(0);
+    dummy.next=head;
+    ListNode first=dummy;
+    ListNode second=dummy;
+    for(int i=1;i<=n+1;i++){
+      first=first.next;
+    }
+    while(first!=null){
+      first=first.next;
+      second=second.next;
+    }
+    second.next=second.next.next;
+    return dummy.next;
+  }
+```
+## 有效的括号
+> 给定一个只包括'(',')','{','}','[',']'的字符串，判断字符串是否有效。有效字符串需满足：
+> 左括号必须用相同类型的右括号闭合
+> 左括号必须以正确的顺序闭合
+> 注意空字符串可被认为是有效字符串
+> 示例1： 输入："()", 输出：true
+> 示例2： 输入："(){}[]",输出：true
+> 示例3： 输入："(]",输出：false
+> 示例4： 输入："([)]",输出：false
+> 示例5： 输入："{[]}",输出：true
+### 解题思路
+* 遍历输入字符串
+* 如果当前字符为左半边括号时，则将其压入栈中
+* 如果遇到右半边括号时，分类讨论：
+* 1.如栈不为空且为对应的左半边括号，则取出栈顶元素，继续循环
+* 2.若此时栈为空，则直接返回false
+* 3.若不为对应的左半边括号，反之返回false
+### 参考代码
+```java
+  public class Solutiong{
+    private  HashMap<Character,Character> mappings;
+    public Solution(){
+      this.mappings=new HashMap<>();
+      this.mappings.put(")","(");
+      this.mappings.put("}","{");
+      this.mappings.put("]","[");
+    }
+    public boolean isValid(String s){
+      Stack<Character> stack=new Stack<>();
+      for(int i=0;i<s.length();i++){
+        char c=s.charAt(i);
+        if(this.mappings.containsKey(c)){
+          char topElement=stack.empty()?"#":stack.pop();
+          if(topElement!=this.mappings.get(c)){
+            return false;
+          }
+        }else{
+          stack.push(c);
+        }
+      }
+      return stack.isEmpty();
+    }
+  }
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
