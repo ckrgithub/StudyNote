@@ -1555,15 +1555,97 @@ LruArrayPool:使用最近最少使用策略维持一个固定大小的数组池
       Integer current = size.get(size);
       if(current==null){
         throw new NullPointerException("Tried to decrement empty size, size: "+size+",this:"+this);
-      }
-      if(current==1){
-        sizes.remove(size);
       }else{
-        sizes.put(size,current-1);
+        if(current.intValue==1){
+          sizes.remove(Integer.valueOf(size));
+        }else{
+          sizes.put(Integer.valueOf(size),Integer.valueOf(current.intValue()-1));
+        }
       }
     }
-    
-    
+    private NavigableMap<Integer,Integer> getSizesForAdapter(Class<?> arrayClass){
+       NavigableMap<Integer,Integer> sizes=(NavigableMap)this.sortedSizes.get(arrayClass);
+       if(sizes==null){
+        sizes=new TreeMap();
+        this.sortedSizes.put(arrayClass,sizes);
+       }
+       return (NavigableMap)sizes;
+    }
+    private <T> ArrayAdapterInterface<T> getAdapterFromObject(T object){
+      return this.getAdapterFromType(object.getClass());
+    }
+    private <T> ArrayAdapterInterface<T> getAdapterFromType(Class<T> arrayPoolClass){
+      ArrayAdapterInterface<?> adapter=(ArrayAdapterInterface)this.adapters.get(arrayPoolClass);
+      if(adpater==null){
+        if(arrayPoolClass.equals(int[].class)){
+          adapter = new IntegerArrayAdapter();
+        }else{
+          if(!arrayPoolClass.equals(byte[].class)){
+            throw new IllegalArgumentException("No array pool found for:"+arrayPoolClass.getSimpleName());;
+          }
+          adapter=new ByteArrayAdapter();
+        }
+        this.adapters.put(arrayPoolClass,adapter);
+      }
+      return (ArrayAdapterInterface)adapter;
+    }
+    int getCurrentSize(){
+      int currentSize=0;
+      Iterator var2=this.sortedSizes.keySet().iterator();
+      while(var2.hasNext()){
+        Class<?> type=(Class)var2.next();
+        Integer size;
+        ArrayAdapterInterface adapter;
+        for(Iterator var4=((NavigableMap)this.sortedSizes.get(type)).keySet().iterator();var4.hasNext();currentSize+=size.intValue()*((Integer)((NavigableMap)this.sortedSizes.get(type)).get(size)).intValue()*adapter.getElementSizeInBytes()){
+          size=(Integer)var4.next();
+          adapter=this.getAdapterFromType(type);
+        }
+      }
+      return currentSize;
+    }
+    private static final class Key implements Poolable{
+      private final LruArrayPool.KeyPool pool;
+      int size;
+      private Class<?> arrayClass;
+      Key(LruArrayPool.KeyPool pool){
+        this.pool=pool;
+      }
+      void init(int length,Class<?> arrayClass){
+        this.size=length;
+        this.arrayClass=arrayClass;
+      }
+      public boolean equals(Object o){
+        if(!(o instanceof LruArrayPool.Key)){
+          return false;
+        }else{
+          LruArrayPool.Key other=(LruArrayPool.Key)o;
+          return this.size==other.size&&this.arrayClass==other.arrayClass;
+        }
+      }
+      public String toString(){
+        return "Key{size="+this.size+"array="+this.arrayClass+"}";
+      }
+      public void offer(){
+        this.pool.offer(this);
+      }
+      public int hashCode(){
+        int result=this.size;
+        result=31*result+(this.arrayClass!=null?this.arrayClass.hashCode():0);
+        return result;
+      }
+    }
+    private static final class KeyPool extends BaseKeyPool<LruArrayPool.Key>{
+      KeyPool(){
+      }
+      LruArrayPool.Key get(int size,Class<?> arrayClass){
+        LruArrayPool.Key result=(LruArrayPool.Key) this.get();
+        result.init(size,arrayClass);
+        return result;
+      }
+      protected LruArrayPool.Key create(){
+        return new LruArrayPool.Key(this);
+      }
+    }
   }
 ```
 
