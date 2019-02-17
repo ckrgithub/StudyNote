@@ -1648,11 +1648,174 @@ LruArrayPool:使用最近最少使用策略维持一个固定大小的数组池
     }
   }
 ```
-
-
-
-
-
+IntegerArrayAdapter
+```java
+  public final class IntegerArrayAdapter implements ArrayAdapterInterface<int[]>{
+    private static final String TAG="IntegerArrayPool";
+    @Override
+    public String getTag(){
+      return TAG;
+    }
+    @Override
+    public int getArrayLength(int[] array){
+      return array.length;
+    }
+    @Override
+    public int[] newArray(int length){
+      return new int[length];
+    }
+    @Override
+    public int getElementSizeInBytes(){
+      return 4;
+    }
+  }
+```
+ByteArrayAdapter
+```java
+  public final class ByteArrayAdapter implements ArrayAdapterInterface<byte[]>{
+    private static final String TAG="ByteArrayPool";
+    @Override
+    public String getTag(){
+      return TAG;
+    }
+    @Override
+    public int getArrayLength(byte[] array){
+      return array.length;
+    }
+    @Override
+    public byte[] newArray(int length){
+      return new byte[length];
+    }
+    @Override
+    public int getElementSizeInBytes(){
+      return 1;
+    }
+  }
+```
+LruResourceCache:使用最近最少策略的内存缓存
+```java
+  public class LruResourceCache extends LruCache<Key,Resource<?>> implements MemoryCache{
+    private ResourceRemovedListener listener;
+    public LruResourceCache(long size){
+      super(size);
+    }
+    @Override
+    public void setResourceRemovedListener(@NonNull ResourceRemovedLisnter listener){
+      this.listener = listener;
+    }
+    @Override
+    protected void onItemEvicted(@NonNull Key key,@Nullable Resource<?> item){
+      if(listener!=null&&item!=null){
+        listener.onResourceRemoved(item);
+      }
+    }
+    @Override
+    protected int getSize(@Nullable Resource<?> item){
+      if(item==null){
+        return super.getSize(null);
+      }else{
+        return item.getSize();
+      }
+    }
+    @Override
+    public void trimMemory(int level){
+      if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_BACKGROUND){
+        clearMemory();
+      }else if(level>=android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN||level==android.content.ComponentCallbacks2.TRIM_MEMRORY_RUNNING_CRITICAL){
+        trimToSize(getMaxSize()/2);
+      }
+    }
+  }
+```
+LruCache:使用最近最少策略回收item,每个item分配一个大小
+```java
+  public class LruCache<T,Y>{
+    private final Map<T,Y> cache = new LinkedHashMap<>(100,0.75f,true);
+    private final long initialMaxSize;
+    private long maxSize;
+    private long currentSize;
+    public LruCache(long size){
+      this.initialMaxSize=size;
+      this.maxSize=size;
+    }
+    public synchronized void setSizeMultiplier(float multiplier){
+      if(multiplier<0){
+        throw new IllegalArgumentException("Multiplier must be >=0");
+      }
+      maxSize=Math.round(initialMaxSize*multiplier);
+      evict();
+    }
+    protected int getSize(Y item){
+      return 1;
+    }
+    protected synchronized int getCount(){
+      return cache.size();
+    }
+    protected void onItemEvicted(@NonNull T key,@Nullable Y item){
+    }
+    public synchronized long getMaxSize(){
+      return maxSize;
+    }
+    public synchronized long getCurrentSize(){
+      return currentSize;
+    }
+    public synchronized boolean contains(@NonNull T key){
+      return cache.containsKey(key);
+    }
+    @Nullable
+    public synchronized Y get(@NonNull T key){
+      return cache.get(key);
+    }
+    @Nullable
+    public synchronized Y put(@NonNull T key,@Nullable Y item){
+      final int itemSize=getSize(item);
+      if(itemSize>=maxSize){
+        onItemEvicted(key,item);
+        return null;
+      }
+      if(item!=null){
+        currentSize+=itemSize;
+      }
+      @Nullable final Y old = cache.put(key,item);
+      if(old!=null){
+        currentSize-=getSize(old);
+        if(!old.equals(item)){
+          onItemEvicted(key,old);
+        }
+      }
+      evict();
+      return old;
+    }
+    @Nullable
+    public synchronized Y remove(@NonNull T key){
+      final Y value = cache.remove(key);
+      if(value!=null){
+        currentSize-=getSize(value);
+      }
+      return value;
+    }
+    public void clearMemory(){
+      trimToSize(0);
+    }
+    protected synchronized void trimToSize(long size){
+      Map.Entry<T,Y> last;
+      Iterator<Map.Entry<T,Y>> cacheIterator;
+      while(currentSize>size){
+        cacheIterator=cache.entrySet().iterator();
+        last=cacheIterator.next();
+        final Y toRemove = last.getValue();
+        currentSize-=getSize(toRemove);
+        final T key=last.getKey();
+        cacheIterator.remove();
+        onItemEvicted(key,toRemove);
+      }
+    }
+    private void evict(){
+      trimToSize(maxSize);
+    }
+    
+  }
+```
 
 
 
