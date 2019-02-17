@@ -1203,6 +1203,7 @@ Util
         return bytesToHex(bytes,SHA_256_CHARS);
       }
     }
+    //字节数组转为16进制的字符串
     @NonNull
     private static String bytesToHex(@NonNull byte[] bytes,@NonNull char[] hexChars){
       int v;
@@ -1816,7 +1817,7 @@ LruCache:使用最近最少策略回收item,每个item分配一个大小
     
   }
 ```
-InternalCacheDiskCacheFactory
+InternalCacheDiskCacheFactory:创建缓存大小为250M、缓存目录为"image_manager_disk_cache"
 ```java
   public fianl class InternalCacheDiskCacheFactory extends DiskLruCacheFactory{
     public InternalCacheDiskCacheFactory(Context context){
@@ -2116,13 +2117,174 @@ DiskCacheWriteLocker
         }
       }
     }
-    
+  }
+```
+FactoryPools
+```java
+  public final class FactoryPools{
+    private static final String TAG="FactoryPools";
+    private static final int DEFAULT_POOL_SIZE=20;
+    private static final Resetter<Object> EMPTY_RESETTER=new Resetter<Object>(){
+      @Override
+      public void reset(@NonNull Object object){
+        
+      }
+    };
+    private FactoryPools(){}
+    @NonNull
+    public static <T extends Poolable> Pool<T> simple(int size,@NonNull Factory<T> factory){
+      return build(new SimplePool<T>(size),factory);
+    }
+    @NonNull
+    public static <T extends Poolable> Pool<T> threadSafe(int size,@NonNull Factory<T> factory){
+      return build(new SynchronizedPool<T>(size),factory);
+    }
+    @NonNull
+    public static <T> Pool<List<T>> threadSafeList(){
+      return threadSafeList(DEFAULT_POOL_SIZE);
+    }
+    @NonNull
+    public static <T> Pool<List<T>> threadSafeList(int size){
+      return build(new SynchronizedPool<List<T>>(size),new Factory<List<T>>(){
+        @NonNull
+        @Override
+        public List<T> create(){
+          return new ArrayList<>();
+        }
+      },new Resetter<List<T>>(){
+        @Override
+        public void reset(@NonNull List<T> object){
+          object.clear();
+        }
+      });
+    }
+    @NonNull
+    private static <T extends Poolable> Pool<T> build(@NonNull Pool<T> pool,@NonNull Factory<T> factory){
+      return build(pool,factory,FactoryPools.<T>emptyResetter());
+    }
+    @NonNull
+    private static <T>Pool<T> build(@NonNull Pool<T> pool,@NonNull Factory<T> factory,@NonNull Resetter<T> resetter){
+      return new FactoryPool<>(pool,factory,resetter);
+    }
+    @NonNull
+    private static <T> Resetter<T> emptyResetter(){
+      return (Resetter<T>)EMPTY_RESETTER;
+    }
+    public interface Factory<T>{
+      T create();
+    }
+    public interface Resetter<T>{
+      void reset(@NonNull T object);
+    }
+    public interface Poolable{
+      @NonNull
+      StateVerifier getVerifier();
+    }
+    private static final class FactoryPool<T> implements Pool<T>{
+      private final Factory<T> factory;
+      private final Resetter<T> resetter;
+      private final Pool<T> pool;
+      FactoryPool(@NonNull Pool<T> pool,@NonNull Factory<T> factory,@NonNull Resetter<T> resetter){
+        this.pool=pool;
+        this.factory=factory;
+        this.resetter=resetter;
+      }
+      @Override
+      public T acquire(){
+        T result=pool.acquire();
+        if(result==null){
+          result=factory.create();
+        }
+        if(result instanceof Poolable){
+          ((Poolable)result).getVerifier().setRecycled(false);
+        }
+        return result;
+      }
+      @Override
+      public boolean release(@NonNull T instance){
+        if(instance instanceof Poolable){
+          ((Poolable)instance).getVerifier().setRecycled(true);
+        }
+        resetter.reset(instance);
+        return pool.release(instance);
+      }
+    }
     
   }
 ```
-
-
-
+Pools:对象池
+```java
+  public final class Pools{
+    public interface Pool<T>{
+      @Nullable
+      T acquire();
+      boolean release(@NonNull T instance);
+    }
+    private Pools(){}
+    //非同步对象池
+    public static class SimplePool<T> implements Pool<T>{
+      private final Object[] mPool;
+      private int mPoolSize;
+      public SimplePool(int maxPoolSize){
+        if(maxPoolSzie<=0){
+          throw new IllegalArgumentException("The max pool size must be > 0");
+        }
+        mPool=new Object[maxPoolSize];
+      }
+      @Override
+      public T acquire(){
+        if(mPoolSize>0){
+          final int lastPooledIndex=mPoolSize-1;
+          T instance=(T)mPool[lastPooledIndex];
+          mPool[lastPooledIndex]=null;
+          mPoolSize--;
+          return instance;
+        }
+        return null;
+      }
+      @Override
+      public boolean release(@NonNull T instance){
+        if(isInPool(instance)){
+          throw new IllegalStateException("Already in the pool!");
+        }
+        if(mPoolSize<mPool.length){
+          mPool[mPoolSize]=instance;
+          mPoolSize++;
+          return true;
+        }
+        return false;
+      }
+      private boolean isInPool(@NonNull T instance){
+        for(int i=0;i<mPoolSize;i++){
+          if(mPool[i]==instance){
+            return true;
+          }
+        }
+        return false;
+      }
+    }
+    //同步对象池
+    public static class SynchronizedPool<T>  extends SimplePool<T>{
+      private final Object mLock=new Oject();
+      public SynchronizedPool(int maxPoolSize){
+        super(maxPoolSize);
+      }
+      @Override
+      public T acquire(){
+        synchronized(mLock){
+          return super.acquire();
+        }
+      }
+      @Override
+      public boolean release(@NonNull T element){
+        synchronized(mLock){
+          return super.release(element);
+        }
+      }
+    }
+    
+  }
+```
 
 
 
