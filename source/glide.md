@@ -1816,6 +1816,245 @@ LruCache:使用最近最少策略回收item,每个item分配一个大小
     
   }
 ```
+InternalCacheDiskCacheFactory
+```java
+  public fianl class InternalCacheDiskCacheFactory extends DiskLruCacheFactory{
+    public InternalCacheDiskCacheFactory(Context context){
+      this(context,DiskCache.Factory.DEFUALT_DISK_CACHE_DIR,DiskCache.Factory.DEFAULT_DISK_CACHE_SIZE);
+    }
+    public InternalCacheDiskCacheFactory(Context context,long diskCacheSize){
+      this(context,DiskCache.Factory.DEFAULT_DISK_CACHE_DIR,diskCacheSize);
+    }
+    public InternalCacheDiskCacheFactory(final Context context,final String diskCacheName,long diskCacheSize){
+      super(new CacheDirectoryGetter(){
+        @Override
+        public File getCacheDirectory(){
+          File cacheDirectory=context.getCacheDir();
+          if(cacheDirectory==null){
+            return null;
+          }
+          if(diskCacheName!=null){
+            return new File(cacheDirectory,diskCacheName);
+          }
+          return cacheDirectory;
+        }
+      },diskCacheSize);
+    }
+  }
+```
+DiskLruCacheFactory
+```java
+DiskLruCacheFactory implements DiskCache.Factory{
+  private final long diskCacheSize;
+  private final CacheDirectoryGetter cacheDirectoryGetter;
+  public interface CacheDirectoryGetter{
+    File getCacheDirectory();
+  }
+  public DiskLruCacheFactory(final String diskCacheFolder,long diskCacheSize){
+    this(new CacheDirectoryGetter(){
+      @Override
+      public File getCacheDirectory(){
+        return new File(diskCacheFolder);
+      }
+    },diskCacheSize);
+  }
+  public DiskLruCacheFactory(final String diskCacheFolder,final String diskCacheName,long diskCacheSize){
+    this(new CacheDirectoryGetter(){
+      @Override
+      public File getCacheDirectory(){
+        return new File(diskCacheFolder,diskCacheName);
+      }
+    },diskCacheSize);
+  }
+  public DiskLruCacheFactory(CacheDirectoryGetter cacheDirectoryGetter,long diskCacheSize){
+    this.diskCacheSize=diskCacheSize;
+    this.cacheDirectoryGetter=cacheDirectoryGetter;
+  }
+  @Override
+  public DiskCache build(){
+    File cacheDir = cacheDirectoryGetter.getCacheDirectory();
+    if(cacheDir==null){
+      return null;
+    }
+    if(!cacheDir.mkdirs()&&(!cacheDir.exists()||!cacheDir.isDirectory())){
+      return null;
+    }
+    return DiskLruCacheWrapper.create(cacheDir,diskCacheSize);
+  }
+  
+}
+```
+DiskCache
+```java
+  public interface DiskCache{
+    interface Factory{
+      int DEFAULT_DISK_CACHE_SIZE=250*1024*1024;
+      String DEFAULT_DISK_CACHE_DIR="image_manager_disk_cahce";
+      @Nullable
+      DiskCache build();
+    }
+    interface Writer{
+      boolean write(@NonNull File file);
+    }
+    @Nullable
+    File get(Key key);
+    void put(Key key,Writer writer);
+    void delete(Key key);
+    void clear();
+  }
+```
+DiskLruCacheWrapper
+```java
+  public class DiskLruCacheWrapper implements DiskCache{
+    private static final String TAG="DiskLurCacheWrapper";
+    private static final int APP_VERSION=1;
+    private static final int VALUE_COUNT=1;
+    private static DiskLruCacheWrapper wrapper;
+    private final SafeKeyGenerator safeKeyGenerator;
+    private final File directory;
+    private final long maxSize;
+    private final DiskCacheWriteLocker writeLocker=new DiskCacheWriteLocker();
+    private DiskLruCache diskLruCache;
+    @Deprecated
+    public static synchronized DiskCache get(File directory,long maxSize){
+      if(wrapper==null){
+        wrapper=new DiskLruCacheWrapper(directory,maxSize);
+      }
+      return wrapper;
+    }
+    public static DiskCache create(Fiel directory,long maxSize){
+      return new DiskLruCacheWrapper(directory,maxSize);
+    }
+    @Deprecated
+    protected DiskLruCacheWrapper(File directory,long maxSize){
+      this.directory=directory;
+      this.maxSize=maxSize;
+      this.safeKeyGenerator=new SafeKeyGenerator();
+    }
+    private synchronized DiskLruCache getDiskCache() throws IOException{
+      if(diskLruCache==null){
+        diskLruCache=DiskLruCache.open(directory,APP_VERSION,VALUE_COUNT,maxSize);
+      }
+      return diskLruCache;
+    }
+    @Override
+    public File get(Key key){
+      String safeKey = safeKeyGenerator.getSafeKey(key);
+      File result=null;
+      try{
+        final DiskLruCache.Value value=getDiskCache().get(safeKey);
+        if(value!=null){
+          result=value.getFile(0);
+        }
+      }catch(IOException e){   
+      }
+      return result;
+    }
+    @Override
+    public void put(Key key,Writer writer){
+      String safeKey=safeKeyGenerator.getSafeKey(key);
+      writeLocker.acquire(safeKey);
+      try{
+        try{
+          DiskLruCache diskCache=getDiskCache();
+          Value current=diskCache.get(safeKey);
+          if(current!=null){
+            return;
+          }
+          DiskLruCache.Editor editor=diskCache.edit(safeKey);
+          if(editor==null){
+            throw new IllegalStateException("Had two simultaneous puts for: "+safeKey);
+          }
+          try{
+            File file = editor.getFile(0);
+            if(writer.write(file)){
+              editor.commit();
+            }
+          }finally{
+            editor.abortUnlessCommitted();
+          }
+        }catch(IOException e){
+        }
+      }finally{
+        writeLocker.release(safeKey);
+      }
+    }
+    public void delete(Key key){
+      String safeKey=safeKeyGenerator.getSafeKey(key);
+      try{
+        getDiskCache().remove(safeKey);
+      }catech(IOException e){
+        
+      }
+    }
+    @Override
+    public synchronized void clear(){
+      try{
+        getDiskCache().delete();
+      }catch(IOException e){
+        
+      }finally{
+        resetDiskCache();
+      }
+    }
+    private synchronized void resetDiskCache(){
+      diskLruCache=null;
+    }
+  }
+```
+SafeKeyGenerator:生成并缓存安全唯一的文件名
+```java
+  public class SafeKeyGenerator{
+    private final LruChace<Key,String> loadIdToSafeHash=new LruCache<>(1000);
+    private final Pools.Pool<PoolableDigestContainer> digestPool=FactoryPools.threadSafe(10,
+      new FactoryPools.Factory<PoolableDigestContainer>(){
+        @Override
+        public PoolableDigestContainer create(){
+          try{
+            return new PoolableDigestContainer(MessageDigest.getInstance("SHA-256"));
+          }catch(NoSuchAlgorithmException e){
+            thrwo new RuntimeException(e);
+          }
+        }
+      });
+    public String getSafeKey(Key key){
+      String safeKey;
+      synchronized(loadIdToSafeHash){
+        safeKey=loadIdToSafeHash.get(key);
+      }
+      if(safeKey==null){
+        safeKey=calculateHexStringDigest(key);
+      }
+      synchronized(loadIdToSafeHash){
+        loadIdToSafeHash.put(key,safeKey);
+      }
+      return safeKey;
+    }
+    private String calculateHexStringDigest(Key key){
+      PoolableDigestContainer container = Preconditions.checkNotNull(digestPool.acquire());
+      try{
+        key.updateDiskCacheKey(container.messageDigest);
+        return Util.sha256BytesToHex(container.messageDigest.digest());
+      }finally{
+        digestPool.release(container);
+      }
+    }
+    private static final class PoolableDigestContainer implements FactoryPools.Poolable{
+      final MessageDigest messageDigest;
+      private final StateVerifier stateVerifier = StateVerifier.newInstance();
+      PoolableDigestContainer(MessageDigest messageDigest){
+        this.messageDigest=messageDigest;
+      }
+      @NonNull
+      @Override
+      public StateVerifier getVerifier(){
+        return stateVerifier;
+      }
+    }
+    
+  }
+```
+
 
 
 
