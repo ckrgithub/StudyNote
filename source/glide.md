@@ -2282,11 +2282,124 @@ Pools:对象池
         }
       }
     }
+  }
+```
+DiskLruCache:每个缓存都有一个字符串键和固定数量的值。每个key必须匹配正则表达式[a-z0-9_-]{1,120}。多进程同时使用同一个缓存目录则回报错。
+```java
+  public final class DiskLruCache implements Closeable{
+    static final String JOURNAL_FILE="journal";
+    static final String JOURNAL_FILE_TEMP="journal.tmp";
+    static final String JOURNAL_FILE_BACKUP="journal.bkp";
+    static final String MAGIC="libcore.io.DiskLruCache";
+    static final String VERSION_1="1";
+    static final long ANY_SEQUENCE_NUMBER=-1;
+    private static final String CLEAN="CLEAN";
+    private static final String DIRTY="DIRTY";
+    private static final String REMOVE="REMOVE";
+    private static final String READ="READ";
+    
+    private final File directory;
+    private final File journalFile;
+    private final File journalFileTmp;
+    private final File journalFileBackup;
+    private final int appVersion;
+    private long maxSize;
+    private final int valueCount;
+    private long size=0;
+    private Writer journalWriter;
+    private final LinkedHashMap<String,Entry> lruEntries=new LinkedHashMap<>(0,0.75f,true);
+    private int redundantOpCount;
+    private long nextSequenceNumber=0;
+    
+    final ThreadPoolExecutor executorService=new ThreadPoolExecutor(0,1,60L,TimeUnit.SECONDS,new LinkedBlockingQueue<Runnable>(),new DiskLruCacheThreadFactory());
+    private final Callable<Void> cleanupCallable= new Callable<Void>(){
+      public Void call() throws Exception{
+        synchronized(DiskLruCache.this){
+          if(journalWriter==null){
+            return null;
+          }
+          trimToSize();
+          if(journalRebuildRequired()){
+            rebuildJournal();
+            redundantOpCount=0;
+          }
+        }
+        return null;
+      }
+    };
+    private DiskLruCache(File directory,int appVersion,int valueCount,long maxSize){
+      this.directory=directory;
+      this.appVersion=appVersion;
+      this.journalFile=new File(directory,JOURNAL_FILE);
+      this.journalFileTmp=new File(directory,JOURNAL_FILE_TEMP);
+      this.journalFileBackup=new File(directory,JOURNAL_FILE_BACKUP);
+      this.valueCount=valueCount;
+      this.maxSize=maxSize;
+    }
+    public static DiskLruCache open(File directory,int appVersion,int valueCount,long maxSize) throws IOException{
+      if(maxSize<=0){
+        throw new IllegalArgumentException("maxSize<=0");
+      }
+      if(valueCount<=0){
+        throw new IllegalArgumentException("valueCount<=0");
+      }
+      File backupFile=new File(directory,JOURNAL_FILE_BACKUP);
+      if(backupFile.exists()){
+        File journalFile=new File(directory,JOURNAL_FILE);
+        if(journalFile.exists()){
+          backupFile.delete();
+        }else{
+          renameTo(backupFile,journalFile,false);
+        }
+      }
+      DiskLruCache cache=new DiskLruCache(directory,appVersion,valueCount,maxSize);
+      if(cache.journalFile.exists()){
+        try{
+          cache.readJournal();
+          cache.processJournal();
+          return cache;
+        }catch(IOException journalIsCorrupt){
+          cache.delete();
+        }
+      }
+      directory.mkdirs();
+      cache=new DiskLruCache(directory,appVersion,valueCount,maxSize);
+      cache.rebuildJournal();
+      return cache;
+    }
+    private void readJournal()throws IOException{
+      StrictLineReader reader=new StrictLineReader(new FileInputStream(journalFile),Util.US_ASCII);
+      try{
+        String magic=reader.readLine();
+        String version=reader.readLine();
+        String appVersionString=reader.readLine();
+        String valueCountString=reader.readLine();
+        String blank=reader.readLine();
+        if(!MAGIC.equals(magic)||!VERSION_1.equals(version)||!Integer.toString(appVersion).equals(appVersionString)||!Integer.toString(valueCount).equals(valueCountString)||!"".equals(blank)){
+          throw new IOException("unexpected journal header: ["+magic+", "+version+", "+valueCountString+", "+black+"]");
+        }
+        int lineCount=0;
+        while(true){
+          try{
+            readJournalLine(reader.readLine);
+            lineCount++;
+          }catch(EOFException endOfJournal){
+            break;
+          }
+        }
+        redundantOpCount=lineCount-lruEntries.size();
+        if(reader.hasUnterminatedLine()){
+          rebuildJournal();
+        }else{
+          journalWriter=new BufferedWriter(new OutputStreamWriter(new FileOutputStream(journalFile,true),Util.US_ASCII));
+        }
+      }finally{
+        Util.cloesQuietly(reader);
+      }
+    }
     
   }
 ```
-
-
 
 
 
