@@ -2397,7 +2397,383 @@ DiskLruCache:每个缓存都有一个字符串键和固定数量的值。每个k
         Util.cloesQuietly(reader);
       }
     }
-    
+    private void readJournalLine(String line)throws IOException{
+      int firstSpace=line.indexOf(" ");
+      if(firstSpace==-1){
+        throw new Exception("unexpected journal line: "+line);
+      }
+      int keyBegin=firstSpace+1;
+      int secondSpace=line.indexOf(" ",keyBegin);
+      final String key;
+      if(secondSpace==-1){
+        key=line.substring(keyBegin);
+        if(firstSpace==REMOVE.length()&&line.statsWith(REMOVE)){
+          lruEntries.remove(key);
+          retrun;
+        }
+      }else{
+        key=line.substring(keyBegin,secondSpace);
+      }
+      Entry entry=lruEntries.get(key);
+      if(entry==null){
+        entry=new Entry(key);
+        lruEntries.put(key,entry);
+      }
+      if(secondSpace!=-1&&firstSpace==CLEAN.length()&&line.startsWith(CLEAN)){
+        String[] parts=line.substring(secondSpace+1).split(" ");
+        entry.readable=true;
+        entry.currentEditor=null;
+        entry.setLengths(parts);
+      }else if(secondSpace==-1&&firstSpace==DIRTY.length()&&line.startsWith(DIRTY)){
+        entry.currentEditor=new Editor(entry);
+      }else if(secondSpace==-1&&firstSpace==READ.length()&&line.startsWith(READ)){
+        
+      }else{
+        throw new IOException("unexpected journal line: "+line);
+      }
+    }
+    private void processJournal() throws IOException{
+      deleteIfExists(journalFileTmp);
+      for(Iterator<Entry> i =lruEntries.values().iterator();i.hasNext();){
+        Entry entry=i.next();
+        if(entry.currentEditor==null){
+          for(int t=0;t<valueCount;t++){
+            size+=entry.lengths[t]
+          }
+        }else{
+          entry.currentEditor=null;
+          for(int t=0;t<valueCount;t++){
+            deleteIfExists(entry.getCleanFile(t));
+            deleteIfExists(entry.getDirtyFile(t));
+          }
+          i.remove();
+        }
+      }
+    }
+    private synchronized void rebuildJournal() throws IOException{
+      if(journalWriter!=null){
+        journalWriter.close();
+      }
+      Writer writer=new BufferedWriter(new OutputStreamWriter(new FileOutputStream(journalFileTmp),Util.US_ASCII));
+      try{
+        writer.write(MAGIC);
+        writer.write("\n");
+        writer.write(VERSION_1);
+        writer.write("\n");
+        writer.write(Integer.toString(appVersion));
+        writer.write("\n");
+        writer.write(Integer.toString(valueCount));
+        writer.write("\n");
+        writer.write("\n");
+        for(Entry entry:lruEntries.values()){
+          if(entry.currentEditor!=null){
+            writer.write(DIRTY+" "+entry.key+"\n");
+          }else{
+            writer.write(CLEAN+" "+entry.key+entry.getLengths()+"\n");
+          }
+        }
+      }finally{
+        writer.close();
+      }
+      if(journalFile.exists()){
+        renameTo(journalFile,journalFileBackup,true);
+      }
+      renameTo(journalFileTmp,journalFile,false);
+      journalFileBackup.delete();
+      journalWriter=new BufferredWriter(new OutputStreamWriter(new FileOutputStream(journalFile,true),Util.US_ASCII));
+    }
+    private static void deleteIfExists(File file) throws IOException{
+      if(file.exists()&&!file.delete()){
+        throw new IOException();
+      }
+    }
+    private static void renameTo(File from,File to,boolean deleteDestination) throws IOException{ 
+      if(deleteDestination){
+        deleteIfExists(to);
+      }
+      if(!from.renameTo(to)){
+        throw new IOException();
+      }
+    }
+    public synchronized Value get(String key) throws IOException{
+      checkNotClosed();
+      Entry entry=lruEntries.get(key);
+      if(entry==null){
+        return null;
+      }
+      if(!entry.readable){
+        return null;
+      }
+      for(File file:entry.cleanFiles){
+        if(!file.exists()){
+          return null;
+        }
+      }
+      redundantOpCount++;
+      journalWriter.append(READ);
+      journalWriter.append(" ");
+      journalWriter.append(key);
+      journalWriter.append("\n");
+      if(journalRebuildRequired()){
+        executorService.submit(cleanupCallable);
+      }
+      return new Value(key,entry.sequenceNumber,entry.cleamFiles,entry.lengths);
+    }
+    public Editor edit(String key) throws IOException{
+      return edit(key,ANY_SEQUENCE_NUMBER);
+    }
+    private synchronized Editor edit(String key,long expectedSequenceNumber) throws IOException{
+      checkNotCloased();
+      Entry entry=lruEntries.get(key);
+      if(expectedSequenceNumber!=ANY_SEQUENCE_NUMBER&&(entry==null||entry.sequenceNumber!=expectedSequenceNumber)){
+        return null;
+      }
+      if(entry==null){
+        entry=new Entry(key);
+        lruEntries.put(key,entry);
+      }else if(entry.currentEditor!=null){
+        return null;
+      }
+      Editor editor=new Editor(entry);
+      entry.currentEditor=editor;
+      journalWriter.append(DIRTY);
+      journalWriter.append(" ");
+      journalWriter.append(key);
+      journalWriter.append("\n");
+      journalWriter.flush();
+      return editor;
+    }
+    public File getDirectory(){
+      return directory;
+    }
+    public synchronized long getMaxSize(){
+      return maxSize;
+    }
+    public synchronized void setMaxSize(long maxSize){
+      this.maxSize=maxSize;
+      executorService.submit(cleanupCallable);
+    }
+    public synchronized long size(){
+      return size;
+    }
+    private synchronized void completeEdit(Editor editor,boolean success) throws IOException{
+      Entry enty=editor.entry;
+      if(entry.currentEditor!=editor){
+        throw new IllegalStateException();
+      }
+      if(success&&!entry.readable){
+        for(int i=0;i<valueCount;i++){
+          if(!editor.written[i]){
+            editor.abort();
+            throw new IllegalStateException("Newly created entry did not create value for index "+i);
+          }
+          if(!entry..getDirtyFile(i).exists()){
+            editor.abort();
+            return;
+          }
+        }
+      }
+      for(int i=0;i<valueCount;i++){
+        File dirty=entry.getDirtyFile(i);
+        if(success){
+          if(dirty.exists()){
+            File clean=entry.getCleanFile(i);
+            dirty.renameTo(clean);
+            long oldLength=entry.lengths[i];
+            long newLength=clean.length();
+            entry.lengths[i]=newLength;
+            size=size-oldLength+newLength;
+          }
+        }else{
+          deleteIfExists(dirty);
+        }
+      }
+      redundantOpCount++;
+      entry.currentEditor=null;
+      if(entry.readable|success){
+        entry.readable=true;
+        journalWriter.append(CLEAN);
+        journalWriter.append(" ");
+        journalWriter.append(entry.key);
+        journalWriter.append(entry.getLengths());
+        journalWriter.append("\n");
+        if(success){
+          entry.sequenceNumber=nextSequenceNumber++;
+        }
+      }else{
+        lruEntries.remove(entry.key);
+        journalWriter.append(REMOVE);
+        journalWriter.append(" ");
+        journalWriter.append(entry.key);
+        journalWriter.append("\n");
+      }
+      journalWriter.flush();
+      if(size>maxSize||journalRebuildRequired()){
+        executorService.submit(cleanupCallable);
+      }
+    }
+    private boolean journalRebuildRequired(){
+      final int redundantOpCompactThreshold=2000;
+      return redundantOpCount>=redundantOpCompactThreshold&&redundantOpCount>=lruEntries.size();
+    }
+    public synchronized boolean remove(String key) throws IOException{
+      checkNotCloased();
+      Entry entry=lruEntries.get(key);
+      if(entry==null||entry.currentEditor!=null){
+        return false;
+      }
+      for(int i=0;i<valueCount;i++){
+        File file=entry.getCleanFile(i);
+        if(file.exists()&&!file.delete()){
+          throw new IOException("failed to delete "+file);
+        }
+        size-=entry.lengths[i];
+        entry.lengths[i]=0;
+      }
+      redundantOpCount++;
+      journalWriter.append(REMOVE);
+      journalWriter.append(" ");
+      journalWriter.append(key);
+      journalWriter.append("\n");
+      lruEntries.remove(key);
+      if(journalRebuildRequired()){
+        executorService.submit(cleanupCallable);
+      }
+      return true;
+    }
+    public synchronized boolean isClosed(){
+      return journalWriter==null;
+    }
+    private void checkNotClosed(){
+      if(journalWriter==null){
+        throw new IllegalStateException("cache is closed");
+      }
+    }
+    public synchronized void flush() throws IOException{
+      chekcNotClosed();
+      trimToSize();
+      journalWriter.flush();
+    }
+    public synchronized void close() throws IOException{
+      if(journalWriter ==null){
+        return;
+      }
+      for(Entry entry:new ArrayList<Entry>(lruEntries.values())){
+        if(entry.currentEditor!=null){
+          entry.currentEditor.abort();
+        }
+      }
+      trimToSize();
+      journalWriter.close();
+      journalWriter=null;
+    }
+    private void trimToSize() throws IOException{
+      while(size>maxSize){
+        Map.Entry<String,Entry> toEvict=lruEntries.entrySet().iterator().next();
+        remove(toEvict.getKey());
+      }
+    }
+    public void delete() throws IOException{
+      close();
+      Util.deleteContents(directory);
+    }
+    private static String inputStreamToString(InputStream in) throws IOException{
+      return Util.readFully(new InputStreamReader(in,Util.UTF_8));
+    }
+    public final class Value{
+      private final String key;
+      private final long sequenceNumber;
+      private final long[] lengths;
+      private final File[] files;
+      private Value(String key,long sequenceNumber,File[] files,long[] lengths){
+       this.key=key;
+       this.sequenceNumber=sequenceNumber;
+       this.files=files;
+       this.lengths=lengths;
+      }
+      public Editor edit()throws IOException{
+        return DiskLruCache.this.edit(key,sequenceNumber);
+      }
+      public File getFile(int index){
+        return files[index];
+      }
+      public String getString(int index)throws IOException{
+        InputStream is=new FileInputStream(files[index]);
+        return inputStreamToString(is);
+      }
+      public long getLength(int index){
+        return lengths[index];
+      }
+    }
+    public final class Editor{
+      private final Entry entry;
+      private final boolean[] written;
+      private boolean committed;
+      private Editor(Entry entry){
+        this.entry=entry;
+        this.written=(entry.readable)?null:new boolean[valueCount];
+      }
+      private InputStream newInputStream(int index) throws IOException{
+        synchronized(DiskLruCache.this){
+          if(entry.currentEditor!=this){
+            throw new IllegalStateException();
+          }
+          if(!entry.readable){
+            return null;
+          }
+          try{
+            return new FileInputStream(entry.getCleanFile(index));
+          }catch(FileNotFoundException e){
+            return null;
+          }
+        }
+      }
+      public String getString(int index) throws IOException{
+        InputStream in = newInputStream(index);
+        return in!=null?inputStreamToString(in):null;
+      }
+      public File getFile(int index) throws IOException{
+        synchronized(DiskLruCache.this){
+          if(entry.currentEditor!=this){
+            throw new IllegalStateException();
+          }
+          if(!entry.readable){
+            written[index]=true;
+          }
+          File dirtyFile=entry.getDirtyFile(index);
+          if(!directory.exists()){
+            directory.mkdirs();
+          }
+          return dirtyFile;
+        }
+      }
+      public void set(int index,String value) throws IOException{
+        Writer writer=null;
+        try{
+          OutputStream os=new FileOutputStream(getFile(index));
+          writer=new OutputStreamWriter(os,Util.UTF_8);
+          writer.write(value);
+        }finally{
+          Util.closeQuietly(writer);
+        }
+      }
+      public void commit() throws IOException{
+        completeEdit(this,true);
+        committed=true;
+      }
+      public void abort() throws IOException{
+        completeEdit(this,false);
+      }
+      public void abortUnlessCommited(){
+        if(!committed){
+          try{
+            abort();
+          }catch(IOException ignored){
+            
+          }
+        }
+      }
+    }
   }
 ```
 
