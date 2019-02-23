@@ -2774,8 +2774,172 @@ DiskLruCache:每个缓存都有一个字符串键和固定数量的值。每个k
         }
       }
     }
+    private final class Entry{
+      private final String key;
+      private final long[] lengths;
+      File[] cleanFiles;
+      File[] dirtyFiles;
+      private boolean readable;
+      private Editor currentEditor;
+      private long sequenceNumber;
+      private Entry(String key){
+        this.key=key;
+        this.lengths=new long[valueCount];
+        cleanFiles=new File[valueCount];
+        dirtyFiles=new File[valueCount];
+        StringBuilder fileBuilder=new StringBuilder(key).append(" ");
+        int truncateTo=fileBuilder.length();
+        for(int i=0;i<valueCount;i++){
+          fileBuilder.append(i);
+          cleanFiles[i]=new File(directory,fileBuilder.toString());
+          fileBuilder.append(".tmp");
+          dirtyFiles[i]=new File(directory,fileBuilder.toString());
+          fileBuilder.setLength(truncateTo);
+        }
+      }
+      public String getLengths() throws IOException{
+        StringBuilder result=new StringBuilder();
+        for(long size:lengths){
+          result.append(" ").append(size);
+        }
+        return result.toString();
+      }
+      private void setLengths(String[] strings) throws IOException{
+        if(strings.length!=valueCount){
+          throw invalidLengths(strings);
+        }
+        try{
+          for(int i=0;i<strings.length;i++){
+            lengths[i]=Long.parseLong(strings[i]);
+          }
+        }catch(NumberFormatException e){
+          throw invalidLengths(strings);
+        }
+      }
+      private IOException invalidLengths(Strings[] strings) throws IOException{
+        throw new IOException("unexpected journal line: "+java.util.Arrays.toString(strings));
+      }
+      public File getCleanFile(int i){
+        return cleanFiles[i];
+      }
+      public File getDirtyFile(int i){
+        return dirtyFiles[i];
+      }
+    }
+    private static final class DiskLruCacheThreadFactory implements ThreadFactory{
+      @Override
+      public synchronized Thread newThread(Runnable runnable){
+        Thread result=new Thread(runnable,"glide-disk-lru-cache-thread");
+        result.setPriority(Thread.MIN_PRIORITY);
+        return result;
+      }
+    }
   }
 ```
+StrictLineReader:用于读取严格有行组成的输入，比如：基于行缓存条目或缓存日志，该类使用不同的输入结束报告和更严格的行定义。
+```java
+  class StrictLineReader implements Closeable{
+    private static final byte CR=(byte)"\r";
+    private static final byte LF=(byte)"\n";
+    private final InputStream in;
+    private final Charset charset;
+    private byte[] buf;
+    private int pos;
+    private int end;
+    public StrictLineReader(InputStream in,Charset charset){
+      this(in,8*1024,charset);
+    }
+    public StrictLineReader(InputStream in,int capacity,Charset charset){
+      if(in==null||charset==null){
+        throw new NullPointerException();
+      }
+      if(capacity<0){
+        throw new IllegalArgumentException("capacity <=0");
+      }
+      if(!(charset.equals(Util.US_ASCII))){
+        throw new IllegalArgumentException("Unsupported encoding");
+      }
+      this.in=in;
+      this.charset=charset;
+      buf=new byte[capacity];
+    }
+    public void close() throws IOException{
+      synchronized(in){
+        if(buf!=null){
+          buf=null;
+          in.close();
+        }
+      }
+    }
+    public String readLine() throws IOException{
+      synchronized(in){
+        if(buf==null){
+          throw new IOException("LineReader is closed");
+        }
+        if(pos>=end){
+          fillBuf();
+        }
+        for(int i=pos;i!=end;++i){
+          if(buf[i]==LF){
+            int lineEnd=(i!=pos&&buf[i-1]==CR)?i-1:i;
+            String res=new String(buf,pos,lineEnd-pos,charset.name());
+            pos=i+1;
+            return res;
+          }
+        }
+        ByteArrayOutputStream out =new ByteArrayOutputStream(end-pos+80){
+          @Override
+          public String toString(){
+            int length=(count>0&&buf[count-1]==CR)?count-1:count;
+            try{
+              return new String(buf,0,length,charset.name());
+            }catch(UnsupportedEncodingException e){
+              throw new AssertionError(e);
+            }
+          }
+        };
+        while(true){
+          out.write(buf,pos,end-pos);
+          end=-1;
+          fillBuf();
+          for(int i=pos;i!=end;++i){
+            if(buf[i]==LF){
+              if(i!=pos){
+                out.write(buf,pos,i-pos);
+              }
+              pos=i+1;
+              return out.toString();
+            }
+          }
+        }
+      }
+    }
+    public boolean hasUnterminatedLine(){
+      return end==-1;
+    }
+    private void fillBuf() throws IOException{
+      int result=in.read(buf,0,buf.length);
+      if(result==-1){
+        throw new EOFException();
+      }
+      pos=0;
+      end=result;
+    }
+  }
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
