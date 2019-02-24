@@ -3443,12 +3443,214 @@ EngineKeyFactory
     }
   }
 ```
-
-
-
-
-
-
+EngineKey:用于多路复用加载的内存中唯一缓存键
+```java
+  class EngineKey implements Key{
+    private final Object model;
+    private final int width;
+    private final int height;
+    private final Class<?> resourceClass;
+    private final Class<?> transcodeClass;
+    private final Key signature;
+    private final Map<Class<?>,Transformation<?>> transformations;
+    private final Options options;
+    private int hashCode;
+    EngineKey(Object model,Key signature,int width,int height,Map<Class<?>,Transformation<?>> transformation,Class<?> resourceClass,CLass<?> transcodeClass,Options options){
+      this.model=Preconditions.checkNotNull(model);
+      this.signature=Preconditioins.checkNotNull(signature,"Signature must not be null");
+      this.width=width;
+      this.height=height;
+      this.transformations=Preconditions.checkNotNull(transformations);
+      this.resourceClass=Preconditions.checkNotNull(resourceClass,"Resource class must not be null");
+      this.transcodeClass=Preconditions.checkNotNull(transcodeClass,"Transcode class must not be null");
+      this.options=Preconditions.checkNotNull(options);
+    }
+    @Override
+    public boolean equals(Object o){
+      if(o instanceof EngineKey){
+        EngineKey other=(EngineKey)o;
+        return model.equals(other.model)&&signature.equals(other.signature)&&height==other.height&&width==other.width&&transformations.equals(other.transformations)&&resourceClass.equals(other.resourceClass)&&transcodeClass.equals(other.transcodeClass)&&options.equals(other.options);
+      }
+      return false;
+    }
+    @Override
+    public int hashCode(){
+      if(hashCode==0){
+        hashCode=model.hashCode;
+        hashCode=31*hashCode+signature.hashCode();
+        hashCode=31*hashCode+width;
+        hashCode=31*hashCode+height;
+        hashCode=31*hashCode+transformations.hashCode();
+        hashCode=31*hashCode+resourceClass.hashCode();
+        hashCode=31*hashCode+transcodeClass.hashCode();
+        hashCode=31*hashCode+options.hashCode();
+      }
+      return hashCode;
+    }
+    @Override
+    public void updateDiskCacheKey(@NonNull MessageDigest messageDigest){
+      throw new UnsupportedOprationException();
+    }
+  }
+```
+ResourceRecycler:可以安全地回收循环递归的资源
+```java
+  class ResourceRecycler{
+    private boolean isRecycling;
+    private final Handler handler=new Handler(Looper.getMainLooper(),new ResourceRecyclerCallback());
+    void recycle(Resource<?> resource){
+      Util.assertMainThread();
+      if(isRecycling){
+        handler.obtainMessage(ResourceRecyclerCallback.RECYCLE_RESOURCE,resource).sendToTarget();
+      }else{
+        isRecyling=true;
+        resource.recycle();
+        isRecycling=false;
+      }
+    }
+    private static final class ResourceRecyclerCallback implements Handler.Callback{
+      static final int RECYCLE_RESOURCE=1;
+      ResourceRecyclerCallback(){}
+      @Override
+      public boolean handleMessage(Message message){
+        if(message.what==RECYCLE_RESOURCE){
+          Resource<?> resource=(Resource<?>)message.obj;
+          resource.recycle();
+          return true;
+        }
+        return false;
+      }
+    }
+  }
+```
+ActiveResources:
+```java
+final class ActiveResources{
+  private static final int MSG_CLEAN_REF=1;
+  private final boolean isActiveResourceRetentionAllowed;
+  private final Handler mainHandler=new Handler(Looper.getMainLooper(),new Callback(){
+    @Override
+    public boolean handleMessage(Message msg){
+      if(msg.what==MSG_CLEAN_REF){
+        cleanupActiveReference((ResourceWeakReference)msg.obj);
+        return true;
+      }
+      return false;
+    }
+  });
+  final Map<Key,ResourceWeakReference> activeEngineResources=new HashMap<>();
+  private ResourceListener listener;
+  @Nullable
+  private ReferenceQueue<EngineResource<?>> resourceReferenceQueue;
+  private Thread cleanReferenceQueueThread;
+  private volatile boolean isShutdown;
+  private volatile DequeuedResourceCallback cb;
+  ActiveResources(boolean isActiveResourceRetentionAllowed){
+    this.isActiveResourceRetentionAllowed=isActiveResourceRetentionAllowed;
+  }
+  void setListener(ResourceListener listener){
+    this.listener=listener;
+  }
+  void activate(Key key,EngineResource<?> resource){
+    ResourceWeakReference toPut=new ResourceWeakReference(key,resource,getReferenceQueue(),isActiveResourceRetentionAllowed);
+    ResourceWeakReference removed=activeEngineResources.put(key,toPut);
+    if(removed!=null){
+      removed.reset();
+    }
+  }
+  void deactivate(Key key){
+    ResourceWeakReference removed=activeEngineResources.remove(key);
+    if(removed!=null){
+      removed.reset();
+    }
+  }
+  @Nullable EngineResource<?> get(Key key){
+    ResourceWeakReference activeRef=activeEngineResources.get(key);
+    if(activeRef==null){
+      return null;
+    }
+    EngineResource<?> active=activeRef.get();
+    if(active==null){
+      cleanupActiveReference(activeRef);
+    }
+    return active;
+  }
+  void cleanupActiveReference(@NonNull ResourceWeakReference ref){
+    Util.assertMainThread();
+    activeEngineResources.remove(ref.key);
+    if(!ref.isCacheable||ref.resource==null){
+      return;
+    }
+    EngineResource<?> newResource=new EngineResource<>(ref.source,true,false);
+    newResource.setResourceListener(ref.key,listener);
+    listener.onResourceReleased(ref.key,newResource);
+  }
+  private ReferenceQueue<EngineResource<?>> getReferenceQueue(){
+    if(resourceReferenceQueue==null){
+      resourceReferenceQueue=new ReferneceQueue<>();
+      cleanReferenceQueueThread=new Thread(new Runnable(){
+        @Override
+        public void run(){
+          Process.setThreadPriority(Process.THREAD_PRIORITY_BACKGROUND);
+          cleanReferenceQueue();
+        }
+      },"glide-active-resources");
+      cleanReferenceQueueThread.start();
+    }
+    return resourceReferenceQueue;
+  }
+  void cleanReferenceQueue(){
+    while(!isShutdown){
+      try{
+        ResourceWeakReference ref=(ResourceWeakReference)resourceReferenceQueue.remove();
+        mainHandler.obtainMessage(MSG_CLEAN_REF,ref).sendToTarget();
+        DequeuedResourceCallback current=cb;
+        if(current!=null){
+          current.onResourceDequeued();
+        }
+      }catch(InterruptedException e){
+        Thread.currentThread().interrupt();
+      }
+    }
+  }
+  void setDequeuedResourceCallback(DequeuedResourceCallback cb){
+    this.cb=cb;
+  }
+  interface DequeuedResourceCallback{
+    void onResourceDequeued();
+  }
+  void shutdown(){
+    isShutdown=true;
+    if(cleanReferenceQueueThread==null){
+      return;
+    }
+    cleanReferenceQueueThread.interrupt();
+    try{
+      cleanReferenceQueueThread.join(TimeUnit.SECONDS.toMillis(5));
+      if(cleanReferenceQueueThread.isActive()){
+        throw new RuntimeException("Failed to join in time");
+      }
+    }catch(InterruptedException e){
+      Thread.currentThread().interrupt();
+    }
+  }
+  static final class ResourceWeakReference extends WeakReference<EngineResource<?>>{
+    final Key key;
+    final boolean isCacheable;
+    Resource<?> resource;
+    ResourceWeakReference(@NonNull Key key,@NonNull EngineResource<?> referent,@NonNull ReferenceQueue<? super EnigeResource<?>> queue,boolean isActiveResourceRetentionAllowed){
+      super(referent,queue);
+      this.key=Preconditions.checkNotNull(key);
+      this.resource=referent.isCacheable()&&isActiveResourceRetentionAllowed?Preconditions.checkNotNull(referent.getResource()):null;
+      isCacheable=referent.isCacheable();
+    }
+    void reset(){
+      resource=null;
+      clear();
+    }
+  }
+}
+```
 
 
 
