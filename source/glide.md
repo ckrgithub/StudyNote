@@ -2927,7 +2927,265 @@ StrictLineReader:用于读取严格有行组成的输入，比如：基于行缓
     }
   }
 ```
-
+## Engine
+负责开启加载和管理活动资源和缓存资源
+```java
+  public class Engine implements EngineJobListener,MemoryCache.ResourceRemovedListener,EngineResource.ResourceListener{
+    private static final String TAG="Engine";
+    private static final int JOB_POOL_SIZE=150;
+    private static fiinal boolean VERBOSE_IS_LOGGABLE=Log.isLoggable(TAG,Log.VERBOSSE);
+    private final Jobs jobs;
+    private final EngineKeyFactory keyFactory;
+    private final MemoryCache cache;
+    private final EngineJobFactory engineJobFactory;
+    private final ResourceRecycler resourceRecycler;
+    private final LazyDiskCacheProvider diskCacheProvider;
+    private final DecodeJobFactory decodeJobFactory;
+    private final ActiveResources activeResources;
+    public Engine(MemoryCache memoryCache,DiskCache.Factory diskCacheFactory,GlideExecutor diskCacheExecutor,GlideExecutor sourceExecutor,GlideExecutor sourceUnlimitedExecutor,GlideExecutor animationExecutor,boolean isActiveResourceRetentionAllowed){
+      this(memoryCache,diskCacheFactory,diskCacheExecutor,sourceExecutor,sourceUnlimiteExecutor,animationExecutor,null,null,null,null,null,null,isActiveResourceRetentionAllowed);
+    }
+    Engine(MemoryCache cache,DiskCache.Factory diskCacheFactory,GlideExecutor diskCacheExecutor,GlideExecutor sourceExecutor,GlideExecutor sourceUnlimitedExecutor,GlideExecutor animationExecutor,Jobs jobs,EngineKeyFactory keyFactory,ActiveResources activeResources,EngineJobFactory engineJobFactory,DecodeJobFactory decodeJobFactory,ResourceRecycler resourceRecycler,boolean isActiveResourceRetetionAllowed){
+      this.cache=cache;
+      this.diskCacheProvider=new LazyDiskCacheProvider(diskCacheFactory);
+      if(activeResources==null){
+        activeResources=new ActiveResources(isActiveResourceRetentionAllowed);
+      }
+      this.activeResources=activeResources;
+      activeResources.setListener(this);
+      if(keyFactory==null){
+        keyFactory=new EngineKeyFactory();
+      }
+      this.keyFactory=keyFactory;
+      if(jobs==null){
+        jobs=new Jobs();
+      }
+      this.jobs=jobs;
+      if(engineJobFactory==null){
+        engineJobFactory=new EngineJobFactory(diskCacheExecutor,sourceExecutor,sourceUnlimitedExecutor,animationExecutor,this);
+      }
+      this.engineJobFactory=engineJobFactory;
+      if(decodeJobFactory==null){
+        decodeJobFactory=new DecodeJobFactory(diskCacheProvider);
+      }
+      this.decodeJobFactory=decodeJobFactory;
+      if(resourceRecycler==null){
+        resourceRecycler=new ResourceRecycler();
+      }
+      this.resourceRecycler=resourceRecycler;
+      cache.setResourceRemovedListener(this);
+    }
+    public <R> LoadStatus load(GlideContext glideContext,Object model,Key signature,int width,int height,Class<?> resourceClass,Class<R> transcodeClass,Priority priority,DiskCacheStrategy diskCacheStrategy,Map<Class<?>,Transformation<?>> transformations,boolean isTransformationRequired,boolean isScaleOnlyOrNoTransform,Options options,boolean isMemoryCacheable,boolean isScaleOnlyOrNoTransform,Options options,boolean isMemoryCachealbe,boolean useUnlimitedSourceExecutorPool,boolean useAnimationPool,boolean onlyRetrieveFromCache,ResourceCallback cb){
+      Util.assertMainThread();
+      long startTime=VERBOSE_IS_LOGGABLE?LogTime.getLogTime():0;
+      EngineKey key=keyFactory.buildKey(model,signature,width,height,transformations,resourceClass,transcodeClass,options);
+      EngineResource<?> active=loadFromActiveResources(key,isMemoryCacheable);
+      if(active!=null){
+        cb.onResourceReady(active,DataSource.MEMORY_CACHE);
+        return null;
+      }
+      EngineResource<?> cached=loadFromCache(key,isMemoryCacheable);
+      if(cached!=null){
+        cb.onResourceReady(cached,DataSource.MEMORY_CACHE);
+        return null;
+      }
+      EngineJob<?> current=jobs.get(key,onlyRetrieveFromCache);
+      if(current!=null){
+        current.addCallback(cb);
+        return new LoadStatus(cb,current);
+      }
+      EngineJob<R> engineJob=engineJobFactory.build(key,isMemoryCacheable,useUnlimitedSourceExecutorPool,useAnimationPool,onleyRetrieveFromCache);
+      DecodeJob<R> decodeJob=decodeJobFactory.build(glideContext,model,key,signature,width,height,resourceClass,transcodeClass,priority,diskCacheStrategy,transformations,isTransformationRequired,isScaleOnlyOrNoTransform,onlyRetrieveFromCache,options,engineJob);
+      jobs.put(key,engineJob);
+      engineJob.addCallback(cb);
+      engineJob.start(decodeJob);
+      return new LoadStatus(cb,engineJob);
+    }
+    private EngineResource<?> laodFromActiveResources(Key key,boolean isMemoryCacheable){
+      if(!isMemoryCacheable){
+        return null;
+      }
+      EngineResource<?> active=activeResources.get(key);
+      if(active!=null){
+        active.acquire();
+      }
+      return active;
+    }
+    private EngineResource<?> loadFromCache(Key key,boolean isMemoryCacheable){
+      if(!isMemoryCacheable){
+        return null;
+      }
+      EngineResource<?> cached=getEngineResourceFromCache(key);
+      if(cache!=null){
+        cache.acquire();
+        activeResources.activate(key,cached);
+      }
+      return cached;
+    }
+    private EngineResource<?> getEngineResourceFromCache(Key key){
+      Resource<?> cached=cache.remove(key);
+      final EngineResource<?> result;
+      if(cache==null){
+        result=null;
+      }else if(cached instanceof EngineResource){
+        result=(EngineResource<?>) cached;
+      }else{
+        result=new EnigneResource<>(cached,true,true);
+      }
+      return result;
+    }
+    public void release(Resource<?> resource){
+      Util.assertMainThread();
+      if(resource instanceof EngineResource){
+        ((EngineResource<?>)resource).release();
+      }else{
+        throw new IllegalArgumentException("Cannot release anything but an EngineResource");
+      }
+    }
+    @Override
+    public void onEngineJobComplete(EngineJob<?> engineJob,Key key,EngineResource<?> resource){
+      Util.assertMainThread();
+      if(resource!=null){
+        resource.setResourceListener(key,this);
+        if(resource.isCacheable()){
+          activeResources.activate(key,resource);
+        }
+      }
+      jobs.removeIfCurrent(key,engineJob);
+    }
+    @Override
+    public void onEngineJobCancelled(EngineJob<?> engineJob,Key key){
+      Util.assertMainThread();
+      jobs.removeIfCurrent(key,engineJob);
+    }
+    @Override
+    public void onResourceRemoved(@NonNull final Resource<?> resource){
+      Util.assertMainThread();
+      resourceRecycler.recycler(resource);
+    }
+    @Override
+    public void onResourceReleased(Key cacheKey,EngineResource<?> resource){
+      Util.assertMainThread();
+      activeResources.deactivate(cacheKey);
+      if(resource.isCacheable()){
+        cache.put(cacheKey,resource);
+      }else{
+        resourceRecyler.recycle(resource);
+      }
+    }
+    public void clearDiskCache(){
+      diskCacheProvider.getDiskCache().clear();
+    }
+    public void shutdown(){
+      engineJobFactory.shutdown();
+      diskCacheProvider.clearDiskCacheIfCreated();
+      activeResources.shutdown();
+    }
+    public static class LoadStatus{
+      private final EngineJob<?> engineJob;
+      private final ResourceCallback cb;
+      LoadStatus(ResourceCallback cb,EngineJob<?> engineJob){
+        this.cb=cb;
+        this.engineJob=engineJob;
+      }
+      public void cancel(){
+        engineJob.removeCallback(cb);
+      }
+    }
+    private static class LazyDiskCacheProvider implements DecodeJob.DiskCacheProvider{
+      private final DiskCache.Factory factory;
+      private volatile DiskCache diskCache;
+      LazyDiskCacheProvider(DiskCache.Factory factory){
+        this.factory=factory;
+      }
+      synchronized void clearDiskCacheIfCreated(){
+        if(diskCache==null){
+          return;
+        }
+        diskCache.clear();
+      }
+      @Override
+      public DiskCache getDiskCache(){
+        if(diskCache==null){
+          synchronized(this){
+            if(diskCache==null){
+              diskCache=factory.build();
+            }
+            if(diskCache==null){
+              diskCache=new DiskCacheAdapter();
+            }
+          }
+        }
+        return diskCache;
+      }
+    }
+    static class DecodeJobFactory{
+      final DecodeJob.DiskCacheProvider diskCacheProvider;
+      final Pools.Pool<DecodeJob<?>> pool=FactoryPools.simple(JOB_POOL_SIZE,new FactoryPools.Factory<DecodeJob<?>>(){
+        @Override
+        public DecodeJob<?> create(){
+          return new DecodeJob<>(diskCacheProvider,pool);
+        }
+      });
+      private int creationOrder;
+      DecodeJobFactory(DecodeJob.DiskCacheProvder diskCacheProvider){
+        this.diskCacheProvider=diskCacheProvider;
+      }
+      <R> DecodeJob<R> build(GlideContext glideContext,Object model,EngineKey loadKey,Key signature,int width,int height,Class<?> resourceClass,Class<R> transcodeClass,Priority priority,DiskCacheStrategy diskCacheStrategy,Map<Class<?>,Transformation<?>> transformations,boolean isTransformationRequired,boolean isScaleOnlyOrNoTransform,boolean onlyRetrieveFromCache,Options options,DecodeJob.Callback<R> callback){
+        DecodeJob<R> result=Preconditions.checkNotNull((DecodeJob<R>) pool.acquire());
+        return result.init(glideContext,model,loadKey,signature,width,height,resourceClass,transcodeClass,priority,diskCacheStrategy,transformations,isTransformationRequired,isScaleOnlyOrNoTransform,onlyRetrieveFromCache,options,callback,createOrder++);
+      }
+    }
+    static class EngineJobFactory{
+      final GlideExecutor diskCacheExecutor;
+      final GlideExecutor sourceExecutor;
+      final GlideExecutor sourceUnlimitedExecutor;
+      final GlideExecutor animationExecutor;
+      final EngineJobListener listener;
+      final Pools.Pool<EngineJob<?>> pool=FactoryPools.simple(JOB_POOL_SIZE,new FactoryPools.Factory<EngineJob<?>>(){
+        @Override
+        public EngineJob<?> create(){
+          return new EngineJob<>(diskCacheExecutor,sourceExecutor,sourceUnlimitedExecutor,animationExecutor,listener,pool);
+        }
+      });
+      EngineJobFactory(GlideExecutor diskCacheExecutor,GlideExecutor sourceExecutor,GlideExecutor sourceUnlimitedExecutor,GlideExecutor animationExecutor,EngineJobLisenter listener){
+        this.diskCacheExecutor=diskCacheExecutor;
+        this.sourceExecutor=sourceExecutor;
+        this.sourceUnlimitedExecutor=sourceUnlimitedExecutor;
+        this.animationExecutor=animationExecutor;
+        this.listener=listener;
+      }
+      void shutdown(){
+        shutdownAndAwaitTermination(diskCacheExecutor);
+        shutdownAndAwaitTermination(sourceExecutor);
+        shutdownAndAwaitTermination(sourceUnlimitedExecutor);
+        shutdownAndAwaitTermination(animationExecutor);
+      }
+      <R> EngineJob<R> build(Key key,
+        boolean isMemoryCacheable,
+        boolean useUnlimitedSourceGeneratorPool,
+        boolean useAnimationPool,
+        boolean onlyRetrieveFromCahce){
+        EngineJob<R> result=Preconditions.checkNotNull((EngineJob<R>)pool.acquire());
+        return result.init(key,isMemoryCacheable,useUnlimitedSourceGeneratorPool,useAnimationPool,onlyRetrieveFromCache);
+      }
+      private static void shutdownAndAwaitTermination(ExecutorService pool){
+        long shutdownSeconds=5;
+        pool.shutdown();
+        try{
+          if(!pool.awaitTermination(shutdownSeconds,TimeUnit.SECONDS)){
+            pool.shutdownNow();
+            if(!pool.awaitTermination(shutdownSeconds,TimeUnit.SECONDS)){
+              throw new RuntimeException("Failed to shutdown");
+            }
+          }
+        }catch(InterruptedException e){
+          throw new RuntimeException(e);
+        }
+      }
+    }
+  }
+```
 
 
 
