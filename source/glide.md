@@ -3651,7 +3651,366 @@ final class ActiveResources{
   }
 }
 ```
-
+DecodeJob:解码来自缓存数据或原资源的资源，并应用于转换和转码。
+```java
+  class DecodeJob<R> implements DataFectcherGenerator.FetcherReadyCallback,Runnable,Comparable<DecodeJob<?>>,Poolable{
+    private static final String TAG="DecodeJob";
+    private final DecodeHelper<R> decodeHelper = new DecodeHelper<>();
+    private final List<Throwable> throwables=new ArrayList<>();
+    private final StateVerifier stateVerifier=StateVerifier.newInstance();
+    private final Pools.Pool<DecodeJob<?>> pool;
+    private final DeferredEncodeManager<?> deferredEncodeManager = new DeferredEncodeManager<>();
+    private final ReleaseManager releaseManager=new ReleaseManager();
+    private GlideContext glideContext;
+    private Key signature;
+    private Priority priority;
+    private EngineKey loadKey;
+    private int width;
+    private int height;
+    private DiskCacheStrategy diskCacheStrategy;
+    private Options options;
+    private Callback<R> callback;
+    private int order;
+    private Stage stage;
+    private RunReason runReason;
+    private long startFetchTime;
+    private boolean onlyRetrieveFromCache;
+    private Object model;
+    private Thread currentThread;
+    private Key currentSourceKey;
+    private Key currentAttemptingKey;
+    private Object currentData;
+    private DataSource currentDataSource;
+    private DataFetcher<?> currentFetcher;
+    private volatile DataFetcherGenerator currentGenrator;
+    private volatile boolean isCallbackNotified;
+    private volatile boolean isCancelled;
+    
+    DecodeJob(DiskCacheProvider diskCacheProvider,Pools.Pool<DecodeJob<?>> pool){
+      this.diskCacheProvider=diskCacheProvider;
+      this.pool=pool;
+    }
+    DecodeJob<R> init(GlideContext glideContext,Object model,EngineKey loadKey,Key signature,int width,int height,Class<?> resourceClass,Class<R> transcodeClass,Priority priority,DiskCacheStrategy diskCacheStrategy,Map<Class<?>,Transformation<?>> transformations,boolean isTransformationRequired,boolean isScaleOnlyOrNoTransform,boolean onlyRetrieveFromCache,Options options,Callback<R> callback,int order){
+      decodeHelper.init(glideContext,model,signature,width,height,diskCacheStrategy,resourceClass,reanscodeClass,priority,options,transformations,isTransformationRequired,isScaleOnlyOrNoTransform,diskCacheProvider);
+      this.gildeContext=glideContext;
+      this.signature=signature;
+      this.priority=priority;
+      this.loadKey=loadKey;
+      this.width=width;
+      this.height=height;
+      this.diskCacheStrategy=diskCacheStrategy;
+      this.onlyRetrieveFromCache=onlyRetrieveFromCache;
+      this.options=options;
+      this.callback=callback;
+      this.order=order;
+      this.runReason=RunReason.INITIALIZE;
+      this.model=model;
+      return this;
+    }
+    boolean willDecodeFromCache(){
+      Stage firstStage=getNextStage(Stage.INITIALIZE);
+      return firstStage==Stage.RESOURCE_CACHE||firstStage==Stage.DATA_CACHE；
+    }
+    void release(boolean isRemovedFromQueue){
+      if(releaseManager.release(isRemovedFromQueue)){
+        releaseInternal();
+      }
+    }
+    private void onEncodeComplete(){
+      if(releaseManager.onEncodeComplete()){
+        releaseInternal();
+      }
+    }
+    private void onLoadFailed(){
+      if(releaseManager.onFailed()){
+        releaseInternal();
+      }
+    }
+    private void releaseInternal(){
+      releaseManager.reset();
+      deferredEncodeManager.clear();
+      decodeHelper.clear();
+      isCallbackNotified=false;
+      glideContext=null;
+      signature=null;
+      options=null;
+      priority=null;
+      stage=null;
+      currentGenerator=null;
+      currentThread=null;
+      currentSourceKey=null;
+      currentData=null;
+      currentDataSource=null;
+      startFetchTime=0L;
+      isCancelled=false;
+      model=null;
+      throwables.clear();
+      pool.release(this);
+    }
+    @Override
+    public int compareTo(@NonNull DecodeJob<?> other){
+      int result=getPriority()-other.getPriority();
+      if(result==0){
+        result=other-other.order;
+      }
+      return result;
+    }
+    private int getPriority(){
+      return priority.ordinal();
+    }
+    public void cancel(){
+      isCancelled=true;
+      DataFetcherGenerator local=currentGenerator;
+      if(local!=null){
+        local.cancel();
+      }
+    }
+    @Override
+    public void run(){
+      GlideTrace.beginSectionFormat("DecodeJob#run(model=%s)",model);
+      DataFetcher<?> localFetcher=currentFetcher;
+      try{
+        if(isCancelled){
+          notifyFailed();
+          return;
+        }
+        runWrapped();
+      }catch(Throwable t){
+        if(stage!=Stage.ENCODE){
+          throwables.add(t);
+          notifyFailed();
+        }
+        if(!isCancelled){
+          throw t;
+        }
+      }finally{
+        if(localFetcher!=null){
+          localFetcher.cleanup();
+        }
+        GlideTrace.endSection();
+      }
+    }
+    private void runWrapped(){
+      switch(runReason){
+        case INITIALIZE:
+          stage=getNextStage(Stage.INITIALIZE);
+          currentGenerator=getNextGenerator();
+          runGenerators();
+          break;
+        case SWITCH_TO_SOURCE_SERVICE:
+          runGenerators();
+          break;
+        case DECODE_DATA:
+          decodeFromRetrievedData();
+          break;
+        default:
+          throw new IllegalStateException("Unrecognized run reason:  "+runReason);
+      }
+    }
+    private DataFetcherGenerator getNextGenerator(){
+      switch(stage){
+        case RESOURCE_CACHE:
+          return new ResourceCacheGenerator(decodeHelper,this);
+        case DATA_CACHE:
+          return new DataCacheGenerator(decodeHelper,this);
+        case SOURCE:
+          return new SourceGenerator(decodeHelper,this);
+        case FINISHED:
+          return null;
+        default:
+          throw new IllegalStateException("Unrecognized stage::  "+stage);
+      }
+    }
+    private void runGenerator(){
+      currentThread=Thread.currentThread();
+      startFetchTime=LogTime.getLogTime();
+      boolean isStarted=false;
+      while(!isCancelled&&currentGenerator!=null&&!(isStarted=currentGenerator.startNext())){
+        stage=getNextStage(stage);
+        currentGenerator=getNextGenerator();
+        if(stage==Stage.SOURCE){
+          reschedule();
+          return;
+        }
+      }
+      if((stage==Stage.FINISHED||isCancelled)&&!isStarted){
+        notifyFailed();
+      }
+    }
+    private void notifyFailed(){
+      setNotifiedOrThrow();
+      GlideException e=new GlideException("Failed to load resource",new ArrayList<>(throwables));
+      callback.onLoadFailed(e);
+      onLoadFailed();
+    }
+    private void notifyComplete(Resource<R> resource,DataSource dataSource){
+      setNotifiedOrThrow();
+      callback.onResourceReady(resource,dataSource);
+    }
+    private void setNotifyOrThrow(){
+      stateVerfier.throwIfRecycled();
+      if(isCallbackNotified){
+        throw new IllegalStateException("Already notified")
+      }
+      isCallbackNotified=true;
+    }
+    private Stage getNextStage(Stage current){
+      switch(current){
+        case INITIALIZE:
+          return diskCacheStrategy.decodeCacheResource()?Stage.RESOURCE_CACHE:getNextStage(Stage.RESOURCE_CACHE);
+        case RESOURCE_CACHE:
+          return diskCacheStrategy.decodeCacheData()?Stage.DATA_CACHE:getNextStage(Stage.DATA_CACHE);
+        case DATA_CACHE:
+          return onlyRetrieveFromCache?Stage.FINISHED:Stage.SOURCE;
+        case SOURCE:
+        case FINISHED:
+          return Stage.FINISHED;
+        default:
+          throw new IllegalArgumentException("Unrecognized stage:  "+current);
+      }
+    }
+    @Override
+    public void reschedule(){
+      runReason=RunReason.SWTICH_TO_SOURCE_SERVICE;
+      callback.reschedule(this);
+    }
+    @Override
+    public void onDataFetcherReady(Key sourceKey,Object data,DataFetcher<?> fetcher,DataSource dataSource,Key attemptedKey){
+      this.currentSourceKey=sourceKey;
+      this.currentData=data;
+      this.currentFetcher=fetcher;
+      this.currentDataSource=dataSource;
+      this.currentAttemptingKey=attemptedKey;
+      if(Thread.currentThread()!=currentThread){
+        runReason=RunReason.DECODE_DATA;
+        callback.reschedule(this);
+      }else{
+        GlideTrace.beginSection("DecodeJob decodeFromRetrievedData");
+        try{
+          decodeFromRetrievedData();
+        }finally{
+          GlideTrace.endSection();
+        }
+      }
+    }
+    @Override
+    public void onDataFetcherFailed(Key attemptedKey,Exception e,DataFetcher<?> fetcher,DataSource dataSource){
+      fetcher.cleanup();
+      GlideException exception=new GlideException("Fetching data failed",e);
+      exception.setLoggingDetails(attemptedKey,dataSource,fetcher.getDataClass());
+      throwables.add(exception);
+      if(Thread.currentThread()!=currentThread){
+        runReason=RunReason.SWITCH_TO_SOURCE_SERVICE;
+        callback.reschedult(this);
+      }else{
+        runGenerators();
+      }
+    }
+    private void decodeFromRetrievedData(){
+      Resource<R> resource=null;
+      try{
+        resource=decodeFromData(currentFetcher,currentData,currentDataSource);
+      }catch(GlideExeption e){
+        e.setLoggingDetails(currentAttemptingKey,currentDataSource);
+        throwables.add(e);
+      }
+      if(resource!=null){
+        notifyEncodeAndRelease(resource,currentDataSource);
+      }else{
+        runGenerators();
+      }
+    }
+    private void notifyEncodeAndRelease(Resource<R> resource,DataSource dataSource){
+      if(resource instanceof Initializable){
+        ((Initializable)resource).initialize();
+      }
+      Resource<R> result=resource;
+      LockedResource<R> lockedResource=null;
+      if(deferredEncodeManager.hasResourceToEncode()){
+        lockedResource=LockedResource.obtain(resource);
+        result=lockedResource;
+      }
+      notifyComplete(result,dataSource);
+      stage=Stage.ENCODE;
+      try{
+        if(deferredEncodeManager.hasResourceToEncode()){
+          deferredEncodeManager.encode(diskCacheProvider,options);
+        }
+      }finally{
+        if(lockedResource!=null){
+          lockedResource.unlock();
+        }
+      }
+      onEncodeComplete();
+    }
+    private <Data> Resource<R> decodeFromData(DataFetcher<?> fetcher,Data data,DataSource dataSource)throws GlideExeption{
+      try{
+        if(data==null){
+          return null;
+        }
+        long startTime=LogTime.getLogTime();
+        Resource<R> result=decodeFromFetcher(data,dataSource);
+        return result;
+      }finally{
+        fetcher.cleanup();
+      }
+    }
+    private <Data> Resource<R> decodeFromFetcher(Data data,DataSource dataSource)throws GlideExeption{
+      LoadPath<Data,?,R> path=decodeHelper.getLoadPath((Class<Data>)data.getClass());
+      return runLoadPath(data,dataSource,path);
+    @NonNull
+    private Options getOptionsWithHardwareConfig(DataSource dataSource){
+      Options options=this.options;
+      if(Build.VERSION.SDK_INI<Build.VERSION_CODES.O){
+        return options;
+      }
+      boolean isHardwareConfigSafe=dataSource==DataSource.RESOURCE_DISK_CACHE||decodeHelper.isScaleOnlyOrNoTransform();
+      Boolean isHardwareConfigAllowed=options.get(Downsampler.ALLOW_HEADWARE_CONFIG);
+      if(isHardwareConfigAllowed!=null&&(!isHardwareConfigAllowed||isHardwareConfigSafe)){
+        return options;
+      }
+      options=new Options();
+      options.putAll(this.options);
+      options.set(Downsampler.ALLOW_HADWARE_CONFIG,isHardwareConfigSafe);
+      return options;
+    }
+    private <Data,ResourceType> Resource<R> runLoadPath(Data data,DataSource dataSource,LoadPath<Data,ResourceType,R> path) throws GlideException{
+      Options options=getOptionsWithHardwareConfig(dataSource);
+      DataRewinder<Data> rewinder=glideContext.getRegistry().getRewinder(data);
+      try{
+        return path.load(rewinder,options,width,height,new DecodeCallback<ResourceType>(dataSource));
+      }finally{
+        rewinder.cleanup();
+      }
+    }
+    private void logWithTimeAndKey(String message,long startTime){
+      logWithTimeAndKey(message,startTime,null);
+    }
+    private void logWithTimeAndKey(String message,long startTime,String extraArgs){
+      
+    }
+    @NonNull
+    @Override
+    public StateVerifier getVerifier(){
+      return stateVerifier;
+    }
+    @NonNull
+    <Z> Resource<Z> onResourceDecoded(DataSource dataSource,@NonNull Resource<Z> decoded){
+      Class<Z> resourceSubClass=(Class<Z>)decoded.get().getClass();
+      Transformation<Z> appliedTransformation=null;
+      Resource<Z> transformed=decode;
+      if(dataSource!=DataSource.RESOURCE_DISK_CACHE){
+        appliedTransformation=decodeHelper.getTransformation(resourceSubClass);
+        transformed=appliedTransformation.transform(glideContext,decoded,width,height);
+      }
+      if(!decoded.equals(transformed)){
+        decoded.recyle();
+      }
+      
+    }
+  }
+  
+```
 
 
 
