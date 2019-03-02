@@ -4125,9 +4125,143 @@ DecodeJob:解码来自缓存数据或原资源的资源，并应用于转换和�
       FINISHED,
     }
   }
-  
 ```
-
+ReferenceQueue:在检测到可达性更改之后，垃圾回收将已注册的引用对象追加到该队列。
+```java
+  public class ReferenceQueue<T>{
+    private static final Reference sQueueNextUnenqueued=new PhantomReference(null,null);
+    private Reference<? extends T> head=null;
+    private Reference<? extends T> tail=null;
+    private final Object lock=new Object();
+    
+    public ReferenceQueue(){}
+    private boolean enqueueLocked(Reference<? extends T> r){
+      if(r.queueNext!=null){
+        return false;
+      }
+      if(r instanceof Cleaner){
+        Cleaner cl=(sun.misc.Cleaner)r;
+        cl.clean();
+        r.queueNext=sQueueNextUnenqueued;
+        return true;
+      }
+      if(tail==null){
+        head=r;
+      }else{
+        tail.queueNext=r;
+      }
+      tail=r;
+      tail.queueNext=r;
+      return true;
+    }
+    boolean isEnqueued(Reference<? extends T> reference){
+      synchronized(lock){
+        return reference.queueNext!=null&&reference.queueNext!=sQueueNextUnqueued;
+      }
+    }
+    boolean enqueue(Reference<? extends T> reference){
+      synchronized(lock){
+        if(enqueueLocked(reference)){
+          lock.notifyAll();
+          return true;
+        }
+        return false;
+      }
+    }
+    private Reference<? extends T> reallyPollLocked(){
+      if(head!=null){
+        Reference<? extends T> r=head;
+        if(head==tail){
+          tail=null;
+          head=null;
+        }else{
+          head=head.queueNext;
+        }
+        r.queueNext=sQueueNextUnenqueued;
+        return r;
+      }
+      return null;
+    }
+    public Reference<? extends T> poll(){
+      synchronized(lock){
+        if(head==null){
+          return null;
+        }
+        return reallyPollLocked();
+      }
+    }
+    public Reference<? extends T> remove(long timeout){
+      if(timeout<0){
+        throw new IllegalArgumentException("Negative timeout value");
+      }
+      synchronized(lock){
+        Reference<? extends T> r=reallyPollLocked();
+        if(r!=null){
+          return r;
+        }
+        long start=(timeout==0)?0:System.nanoTime();
+        for(;;){
+          lock.wait(timeout);
+          r=reallyPollLocked();
+          if(timeout!=0){
+            long end=System.nanoTime();
+            timeout-=(end-start)/1000_000;
+            if(timeout<=0){
+              return null;
+            }
+            satrt=end;
+          }
+        }
+      }
+    }
+    public Referenc<? extends T> remove() throws InterruptedException{
+      return remove(0);
+    }
+    public static void enqueuePending(Reference<?> list){
+      Reference<?> start=list;
+      do{
+        ReferenceQueue queue=list.queue;
+        if(queue==null){
+          Reference<?> next=list.pendingNext;
+          list.pendingNext=list;
+          list=next;
+        }else{
+          synchronized(queue.lock){
+            do{
+              Reference<?> next=list.pendingNext;
+              list.pendingNext=list;
+              queue.enqueueLocked(list);
+              list=next;
+            }while(list!=start&&list.queue==queue){
+              queue.lock.notifyAll();
+            }
+          }
+        }while(list!=start);
+      }
+    }
+    public static Reference<?> unenqueued=null;
+    statice void add(Reference<?> list){
+      synchronized(ReferenceQueue.class){
+        if(unenqueued==null){
+          unenqueued=list;
+        }else{
+          Reference<?> last=unqueued;
+          while(last.pendingNext!=unqueued){
+            last=last.pendingNext;
+          }
+          last.pendingNext=list;
+          last=list;
+          while(last.pendingNext!=list){
+            last=last.pendingNext;
+          }
+          last.pendingNext=unenqueued;
+        }
+        ReferenceQueue.class.notifyAll();
+      }
+    }
+    
+  }
+```
 
 
 
