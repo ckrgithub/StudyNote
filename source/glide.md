@@ -4006,7 +4006,123 @@ DecodeJob:解码来自缓存数据或原资源的资源，并应用于转换和�
       if(!decoded.equals(transformed)){
         decoded.recyle();
       }
-      
+      final EncodeStrategy encodeStrategy;
+      final ResourceEncoder<Z> encoder;
+      if(decodeHelper.isResourceEncoderAvailable(transformed)){
+        encoder=decodeHelper.getResultEncoder(transformed);
+        encodeStrategy=encoder.getEncodeStrategy(options);
+      }else{
+        encoder=null;
+        encodeStrategy=EncodeStrategy.NONE;
+      }
+      Resource<Z> result=transformed;
+      boolean isFromAlternateCacheKey=!decodeHelper.isSourceKey(currentSourceKey);
+      if(diskCacheStrategy.isResourceCacheable(isFromAlternateCacheKey,dataSource,encodeStrategy)){
+        if(encoder==null){
+          throw new Registry.NoResultEncoderAvailableException(transformed.get().getClass());
+        }
+        final Key key;
+        switch(encodeStrategy){
+          case SOURCE:
+            key=new DataCacheKey(currentSourceKey,signature);
+            break;
+          case TRANSFORMED:
+            key=new ResourceCacheKey(decodeHelper.getArrayPool(),currentSourceKey,signature,width,height,appliedTransformation,resourceSubClass,options);
+            break;
+          default:
+            throw new IllegalArgumentException("Unknown strategy:  "+encodeStrategy);
+        }
+        LockedResource<Z> lockedResult=LockedResource.obtain(transformed);
+        deferredEncodeManager.init(key,encoder,lockedResult);
+        result=lockedResult;
+      }
+      return result;
+    }
+    private final class DecodeCallback<Z> implements DecodePath.DecodeCallback<Z>{
+      private final DataSource dataSource;
+      DecodeCallback(DataSource dataSource){
+        this.dataSource=dataSource;
+      }
+      @NonNull
+      @Override
+      public Resource<Z> onResourceDecoded(@NonNull Resource<Z> decoded){
+        return DecodeJob.this.onResourceDecoded(dataSource,decoded);
+      }
+    }
+    private static class ReleaseManager{
+      private boolean isReleased;
+      private boolean isEncodeComplete;
+      private boolean isFailed;
+      ReleaseManager(){}
+      synchronized boolean release(boolean isRemovedFromQueue){
+        isRelease=true;
+        return isComplelte(isRemovedFromQueue);
+      }
+      synchronized boolean onEncodeComplete(){
+        isEncodeComplete=true;
+        return isComplete(false);
+      }
+      synchronized boolean onFailed(){
+        isFailed=true;
+        return isComplete(false);
+      }
+      synchronized void reset(){
+        isEncodeComplete=false;
+        isReleased=false;
+        isFailed=false;
+      }
+      private boolean isComplete(boolean isRemovedFromQueue){
+        return (isFailed||isRemovedFromQueue||isEncodeComplete)&&isReleased;
+      }
+    }
+    private static class DeferredEncodeManager<Z>{
+      private Key key;
+      private ResourceEncoder<?> encoder;
+      private LockedResource<Z> toEncode;
+      DeferredEncodeManager(){}
+      <X> void init(Key key,ResourceEncoder<X> encoder,LockedResource<X> toEncode){
+        this.key=key;
+        this.encoder=(ResourceEncoder<Z>)encoder;
+        this.toEncode=(LockedResource<Z>)toEncode;
+      }
+      void encode(DiskCacheProvider diskCacheProvider,Options options){
+        GlideTrace.beginSection("DecodeJob.encode");
+        try{
+          diskCacheProvider.getDiskCache().put(key,new DataCacheWriter<>(encoder,toEncode,options));
+        }finally{
+          toEncode.unlock();
+          GlideTrace.endSection();
+        }
+      }
+      boolean hasResourceToEncode(){
+        return toEncdoe!=null;
+      }
+      void clear(){
+        key=null;
+        encoder=null;
+        toEncode=null;
+      }
+    }
+    interface Callback<R>{
+      void onResourceReady(Resource<R> resource,DataSource dataSource);
+      void onLoadFailed(GlideException e);
+      void reschedule(DecodeJob<?> job);
+    }
+    interface DiskCacheProvider{
+      DiskCache getDiskCache();
+    }
+    private enum RunReason{
+      INITIALIZE,
+      SWITCH_TO_SOURCE_SERVICE,
+      DECODE_DATA,
+    }
+    private enum Stage{
+      INITIALIZE,
+      RESOURCE_CACHE,
+      DATA_CACHE,
+      SOURCE,
+      ENCODE,
+      FINISHED,
     }
   }
   
