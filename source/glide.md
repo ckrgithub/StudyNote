@@ -4788,7 +4788,72 @@ SourceGenerator:从使用ModelLoaders注册的原始数据中获取
     }
   }
 ```
-
+GlideContext:在包含和公开加载资源中各种注册和类的glide中所有加载的全局context
+```java
+  public class GlideContext extends ContextWrapper{
+    static final TransitionOptions<?,?> DEFAULT_TRANSITION_OPTIONS=new GenericTransitionOptions<>();
+    private final Handler mainHandler;
+    private final ArrayPool arrayPool;
+    private final Registry registry;
+    private final ImageViewTargetFactory imageViewTargetFactory;
+    private final RequestOptions defaultRequestOptions;
+    private final Map<Class<?>,TransitionOptions<?,?>> defaultTransitionOptions;
+    private final Engine engine;
+    private final int logLevel;
+    public GlideContext(@NonNull Context context,@NonNull ArrayPool arrayPool,Registry registry,@NonNull ImageViewTargetFactory imageViewTargetFactory,@NonNull RequestOptions defaultRequestOptions,@NonNull Map<Class<?>,TransitionOptions<?,?>> defaultTransitionOptions,@NonNull Engine engine,int logLevel){
+      super(context.getApplicationContext());
+      this.arrayPool=arrayPool;
+      this.registry=registry;
+      this.imageViewTargetFactory=imageViewTargetFactory;
+      this.defaultRequestOptions=defaultRequestOptions;
+      this.defaultTransitionOptions=defaultTransitionOptions;
+      this.engine=engine;
+      this.logLevel=logLevel;
+      mainHandler=new Handler(Looper.getMainLooper());
+    }
+    public RequestOptions getDefaultRequestOptions(){
+      return defaultRequestOptions;
+    }
+    @NoNull
+    public <T> TransitionOptions<?,T> getDefaultTransitionOptions(@NonNull Class<T> transcodeClass){
+      TransitionOptions<?,?> result=defaultTransitionOptions.get(transcodeClass);
+      if(result==null){
+        for(Entry<Class<?> ,TransitionOptions<?,?>> value:defaultTransitionOptions.entrySet()){
+          if(value.getKey().isAssignableFrom(transcodeClass)){
+            result=value.getValue();
+          }
+        }
+      }
+      if(result==null){
+        result=DEFAULT_TRANSITION_OPTIONS;
+      }
+      return (TransitionOptions<?,T>)result;
+    }
+    @NonNull
+    public <X> ViewTarget<ImageView,X> buildImageViewTarget(@NonNull ImageView imageView,@NonNull Class<X> transcodeClass){
+      return imageViewTargetFactory.buildTarget(imageView,transcodeClass);
+    }
+    @NonNull
+    public Handler getMainHandler(){
+      return mainHandler;
+    }
+    @NonNull
+    public Engine getEngine(){
+      return engine;
+    }
+    @NonNull
+    public Registry getRegistry(){
+      return registry;
+    }
+    public int getLogLevel(){
+      return logLevel;
+    }
+    @NonNull
+    public ArrayPool getArrayPool(){
+      return arrayPool;
+    }
+  }
+```
 
 
 
