@@ -4478,8 +4478,79 @@ Options:应用于内存和磁盘的一组键
     }
   }
 ```
-
-
+Option:定义具有可选默认值的和能够影响磁盘资源缓存键的可用的组件选项，如：解码器、编码器、模型加载器
+```java
+  public final class Option<T>{
+    private static final CacheKeyUpdater<Object> EMPTY_UPDATE=new CacheKeyUpdater<Object>(){
+      @Override
+      public void update(@NonNull byte[] keyBytes,@NonNull Object value,@NonNull MessageDigest messageDigest){
+        
+      }
+    };
+    private final T defaultValue;
+    private final CacheKeyUpdater<T> cacheKeyUpdater;
+    private final String key;
+    private volatile byte[] keyBytes;
+    @NonNull
+    public static <T> Option<T> memory(@NonNull String key){
+      return new Option<>(key,null,Option.<T> emptyUpdater());
+    }
+    @NonNull
+    public static <T> Option<T> memory(@NonNull String key,@NonNull T defaultValue){
+      return new Option<>(key,defaultValue,Option.<T>emptyUpdater());
+    }
+    @NonNull
+    public static <T> Option<T> disk(@NonNull String key,@NonNull CacheKeyUpdater<T> cacheKeyUpdater){
+      return new Option<>(key,null,cacheKeyUpdater);
+    }
+    @NonNull
+    public static <T> Option<T> disk(@NonNull String key,@Nullable T defaultValue,@NonNull CacheKeyUpdater<T> cacheKeyUpdater){
+      return new Option<>(key,defaultValue,cacheKeyUpater);
+    }
+    private Option(@NonNull String key,@Nullable T defaultValue,@NonNull CacheKeyUpdater<T> cacheKeyUpdater){
+      this.key=Preconditions.checkNotEmpty(key);
+      this.defaultValue=defaultValue;
+      this.cacheKeyUpdater=Preconditions.checkNotNull(cacheKeyUpdater);
+    }
+    @Nullable
+    public T getDefaultValue(){
+      return defaultValue;
+    }
+    public void update(@NonNull T value,@NonNull MessageDigest messageDigest){
+      cacheKeyUpdater.update(getKeyBytes(),value,messageDigest);
+    }
+    @NonNull
+    private byte[] getKeyBytes(){
+      if(keyBytes==null){
+        keyBytes=key.getBytes(Key.CHARSET);
+      }
+      return keyBytes;
+    }
+    @Override
+    public boolean equals(Object o){
+      if(o instanceof Option){
+        Option<?> other=(Option<?>)o;
+        return key.equals(other.key);
+      }
+      return false;
+    }
+    @Override
+    public int hashCode(){
+      return key.hashCode();
+    }
+    @NonNull
+    private static <T> CacheKeyUpdater<T> emptyUpdater(){
+      return (CacheKeyUpdater<T>)EMPTY_UPDATE;
+    }
+    @Override
+    public String toString(){
+      return "Option{key="+key+"}";
+    }
+    public interface CacheKeyUpdater<T>{
+      void update(@NonNull byte[] keyBytes,@NonNull T value,@NonNull MessageDigest messageDigest);
+    }
+  }
+```
 
 
 
