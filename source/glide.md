@@ -4259,7 +4259,6 @@ ReferenceQueue:在检测到可达性更改之后，垃圾回收将已注册的�
         ReferenceQueue.class.notifyAll();
       }
     }
-    
   }
 ```
 
@@ -4278,6 +4277,22 @@ ReferenceQueue:在检测到可达性更改之后，垃圾回收将已注册的�
 * DiskCacheStrategy.RESOURCE: 只缓存转换过后的图片
 * DiskCacheStrategy.ALL: 即缓存原始图片，也缓存转换过后的图片
 * DiskCacheStrategy.AUTOMATIC: 让glide根据图片资源智能选择使用哪种缓存策略
+## hashCode算法
+```java
+  //String的hashCode公式:s[0]*31^(n-1)+s[1]*31^(n-2)+...+s[n-1],其中s[i]是字符串中的字符，n=字符串的长度
+  //有个疑惑，n>=7时，hashCode值不会超出Integer.MAX_VALUE么？
+  public int hashCode(){
+  int h=hash;
+  final int leg=length();
+  if(h==0&&len>0){
+    for(int i=0;i<len;i++){
+      h=31*h+charAt(i);
+    }
+    hash=h;
+  }
+  return h;
+  }
+```
 
 
 
