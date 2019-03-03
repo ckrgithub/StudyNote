@@ -4632,6 +4632,167 @@ ResourceCacheGenerator:从包含采样/转换过的资源数据的缓存文件�
     }
   }
 ```
+DataCacheGenerator:从包含原始未修改的原数据缓存文件中获取
+```java
+  class DataCacheGenerator implements DataFetcherGenerator,DataFetcher.DataCallback<Object>{
+    private final List<Key> cacheKeys;
+    private final DecodeHelper<?> helper;
+    private final FetcherReadyCallback cb;
+    private int sourceIdIndex=-1;
+    private Key sourceKey;
+    private List<ModelLoader<File,?>> modelLoaders;
+    private int modelLoaderIndex;
+    private volatile LoadData<?> loadData;
+    private File cacheFile;
+    DataCacheGenerator(DecodeHelper<?> helper,FetcherReadyCallback cb){
+      this(helper.getCacheKeys(),helper,cb);
+    }
+    DataCacheGenerator(List<Key> cacheKeys,DecodeHelper<?> helper,FetcherReadyCallback cb){
+      this.cacheKeys=cacheKeys;
+      this.helper=helper;
+      this.cb=cb;
+    }
+    @Override
+    public boolean startNext(){
+      while(modelLoaders==null||!hasNextModelLoader()){
+        sourceIdIndex++;
+        if(sourceIdIndex>=cacheKeys.size()){
+          return false;
+        }
+        Key sourceId=cacheKeys.get(sourceIdIndex);
+        Key originalKey=new DataCacheKey(sourceId,helper.getSignature());
+        cacheFile=helper.getDiskCache().get(originalKey);
+        if(cacheFile!=null){
+          this.sourceKey=sourceId;
+          modelLoaders=helper.getModelLoaders(cacheFile);
+          modelLoaderIndex=0;
+        }
+      }
+      loadData=null;
+      boolean started=false;
+      while(!started&&hasNextModelLoader()){
+        ModelLoader<File,?> modelLoader=modelLoaders.get(modelLoaderIndex++);
+        loadData=modelLoader.buildLoadData(cacheFile,helper.getWidth(),helper.getHeight(),helper.getOptions());
+        if(loadData!=null&&helper.hasLoadPath(loadData.fetcher.getDataClass())){
+          started=true;
+          loadData.fetcher.loadData(helper.getPriority(),this);
+        }
+      }
+      return started;
+    }
+    private boolean hasNextModelLoader(){
+      return modelLoaderIndex<modelLoaders.size();
+    }
+    @Override
+    public void cancel(){
+      LoadData<?> local=loadData;
+      if(local!=null){
+        local.fetcher.cancel();
+      }
+    }
+    @Override
+    public void onDataReady(Object data){
+      cb.onDataFetcherReady(sourceKey,data,loadData.fetcher,DataSource.DATA_DISK_CAHCE,sourceKey);
+    }
+    @Override
+    public void onLoadFailed(@NonNull Exception e){
+      cb.onDataFetcherFailed(sourceKey,e,loadData.fetcher,DataSource.DATA_DISK_CACHE);
+    }
+    
+  }
+```
+SourceGenerator:从使用ModelLoaders注册的原始数据中获取
+```java
+  class SourceGenerator implements DataFetcherGenerator,DataFetcher.DataCallback<Object>,DataFetcherGenerator.FetcherReadyCallback{
+    private static final String TAG="SourceGenerator";
+    private final DecodeHelper<?> helper;
+    private final FetcherReadyCallback cb;
+    private int loadDataListIndex;
+    private DataCacheGenerator sourceCacheGenerator;
+    private Object dataToCache;
+    private volatile ModelLoader.LoadData<?> loadData;
+    private DataCacheKey originalKey;
+    SourceGenerator(DecodeHelper<?> helper,FetcherReadyCallback cb){
+      this.helper=helper;
+      this.cb=cb;
+    }
+    @Override
+    public boolean startNext(){
+      if(dataToCache!=null){
+        Object data=dataToCache;
+        dataToCache=null;
+        cacheData(data);
+      }
+      if(sourceCacheGenerator!=null&&sourceCacheGenerator.startNext()){
+        return true;
+      }
+      sourceCacheGenerator=null;
+      loadData=null;
+      boolean started=false;
+      while(!started&&hasNextModelLoader()){
+        loadData=helper.getLoadData().get(loadDataListIndex++);
+        if(loadData!=null&&(helper.getDiskCacheStrategy().isDataCacheable(loadData.fetcher.getDataSource())||helper.hasLoadPath(loadData.fetcher.getDataClass()))){
+          started=true;
+          loadData.fetcher.loadData(helper.getPriority(),this);
+        }
+      }
+      return started;
+    }
+    private boolean hasNextModelLoader(){
+      return loadDataListIndex<helper.getLoadData().size();
+    }
+    private void cacheData(Object dataToCache){
+      long startTime=LogTime.getLogTime();
+      try{
+        Encoder<Object> encoder=helper.getSourceEncoder(dataToCache);
+        DataCacheWriter<Object> writer=new DataCacheWriter<>(encoder,dataToCache,helper.getOptions());
+        originalKey=new DataCacheKey(loadData.sourceKey,helper.getSignature());
+        helper.getDiskCache().put(originalKey,writer);
+      }finally{
+        loadData.fetcher.cleanup();
+      }
+      sourceCacheGenerator=new DataCacheGenerator(Collections.singletonList(loadData.sourceKey),helper,this);
+    }
+    @Override
+    public void cancel(){
+      LoadData<?> local=loadData;
+      if(local!=null){
+        local.fetcher.cancel();
+      }
+    }
+    @Override
+    public void onDataReady(Object data){
+      DiskCacheStrategy diskCacheStrategy=helper.getDiskCacheStrategy();
+      if(data!=null&&diskCacheStrategy.isDataCacheable(loadData.fetcher.getDataSource())){
+        dataToCache=data;
+        cb.reschedule();
+      }else{
+        cb.onDataFetcherReady(loadData.sourceKey,data,loadData.fetcher,loadData.fetcher.getDataSource(),originalKey);
+      }
+    }
+    @Override
+    public void onLoadFailed(@NonNull Exception e){
+      cb.onDataFetcherFailed(originalKey,e,loadData.fetcher,loadData.fetcher.getDataSource());
+    }
+    @Override
+    public void reschedule(){
+      throw new UnsupportedOperationException();
+    }
+    @Override
+    public void onDataFetcherReady(Key sourceKey,Object data,DataFetcher<?> fetcher,DataSource dataSource,Key attemptedKey){
+      cb.onDataFetcherReady(sourceKey,data,fetcher,loadData.fetcher.getDataSource(),sourceKey);
+    }
+    @Override
+    public void onDataFetcherFailed(Key sourceKey,Exception e,DataFetcher<?> fetcher,DataSource dataSource){
+      cb.onDataFetcherFailed(sourceKey,e,fetcher,loadData.fetcher.getDataSource());
+    }
+  }
+```
+
+
+
+
+
 
 
 
@@ -4659,7 +4820,6 @@ ResourceCacheGenerator:从包含采样/转换过的资源数据的缓存文件�
   return h;
   }
 ```
-
 
 
 
