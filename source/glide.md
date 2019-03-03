@@ -4551,7 +4551,87 @@ Option:定义具有可选默认值的和能够影响磁盘资源缓存键的可�
     }
   }
 ```
-
+ResourceCacheGenerator:从包含采样/转换过的资源数据的缓存文件获取
+```java
+  class ResourceCacheGenerator implements DataFetchGenerator,DataFetcher.DataCallback<Object>{
+    private final FetcherReadyCallback cb;
+    private final DecodeHelper<?> helper;
+    private int sourceIdIndex;
+    private int resourceClassIndex=-1;
+    private Key sourceKey;
+    private List<ModelLoader<File,?>> modelLoaders;
+    private int modelLoaderIndex;
+    private volatile LoadData<?> loadData;
+    private File cacheFile;
+    private ResourceCacheKey currentKey;
+    ResourceCacheGenerator(DecodeHelper<?> helper,FetcherReadyCallback cb){
+      this.helper=helper;
+      this.cb=cb;
+    }
+    @Override
+    public boolean startNext(){
+      List<Key> sourceIds=helper.getCacheKeys();
+      if(sourceIds.isEmpty()){
+        return false;
+      }
+      List<Class<?>> resourceClasses=helper.getRegisteredResourceClasses();
+      if(resourceClasses.isEmpty()){
+        if(File.class.equals(helper.getTranscodeClass())){
+          return false;
+        }
+      }
+      while(modelLoaders==null||!hasNextModelLoader()){
+        resourceClassIndex++;
+        if(resourceClassIndex>=resourceClasses.size()){
+          sourceIdIndex++;
+          if(sourceIdIndex>=sourceIds.size()){
+            return false;
+          }
+          resourceClassIndex=0;
+        }
+        Key sourceId=sourceIds.get(sourceIdIndex);
+        Class<?> resourceClass=resourceClasses.get(resourceClassIndex);
+        Transformation<?> transformation=helper.getTransformation(resourceClass);
+        currentKey=new ResourceCacheKey(helper.getArrayPool(),sourceId,helper.getSignature(),helper.getWidth(),helper.getHeight(),transformation,resourceClass,helper.getOptions());
+        cahceFile=helper.getDiskCache().get(currentKey);
+        if(cacheFile!=null){
+          sourceKey=sourceId;
+          modelLoaders=helper.getModelLoaders(cacheFile);
+          modelLoaderIndex=0;
+        }
+      }
+      loadData=null;
+      boolean started=false;
+      while(!started&&hasNextModelLoader()){
+        ModelLoader<File,?> modelLoader=modelLoaders.get(modelLoaderIndex++);
+        loadData=modelLoader.buildLoadData(cacheFile,helper.getWidth(),helper.getHeight(),helper.getOptions());
+        if(loadData!=null&&helper.hasLoadPath(loadData.fetcher.getDataClass())){
+          started=true;
+          loadData.fetcher.loadData(helper.getPriority(),this);
+        }
+      }
+      return started;
+    }
+    private boolean hasNextModelLoader(){
+      return modelLoaderIndex<modelLoaders.size();
+    }
+    @Override
+    public void cancel(){
+      LoadData<?> local=loadData;
+      if(local!=null){
+        local.fetcher.cancel();
+      }
+    }
+    @Override
+    public void onDataReady(Object data){
+      cb.onDataFetcherReady(sourceKey,data,loadData.fetcher,DataSource.RESOURCE_DISK_CACHE,currentKey);
+    }
+    @Override
+    public void onLoadFailed(@NonNull Exception e){
+      cb.onDataFetcherFailed(currentKey,e,loadData.fetcher,DataSource.RESOURCE_DISK_CACHE);
+    }
+  }
+```
 
 
 
