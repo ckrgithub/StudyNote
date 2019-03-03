@@ -4854,7 +4854,138 @@ GlideContext:在包含和公开加载资源中各种注册和类的glide中所�
     }
   }
 ```
-
+Registry:管理组件注册以扩展或替换Glide默认的加载、解码和编码逻辑
+```java
+  public class Registry{
+    public static final String BUCKET_GIF="Gif";
+    public static final String BUCKET_BITMAP="Bitmap";
+    public static final String BUCKET_BITMAP_DRAWABLE="BitmapDrawable";
+    private static final String BUCKET_PREPEND_ALL="legacy_prepend_all";
+    private static final String BUCKET_APPEND_ALL="legacy_append";
+    private final ModelLoaderRegistry modelLoaderRegistry;
+    private final EncoderRegistry encoderRegistry;
+    private final ResourceDecoderRegistry decoderRegistry;
+    private final ResourceEncoderRegistry resourceEncoderRegistry;
+    private final DataRewinderRegistry dataRewinderRegistry;
+    private final TranscoderRegistry transcoderRegistry;
+    private final ImageHeaderParserRegistry imageHeaderParserRegistry;
+    private final ModelToResourceClassCache modelToResourceClassCache=new ModelToResourceClassCache();
+    private final LoadPathCache loadPathCache=new LoadPathCache();
+    private final Pool<List<Throwable>> throwableListPool=FactoryPools.threadSafeList();
+    public Registry(){
+      this.modelLoaderRegistry=new ModelLoaderRegistry(throwableListPool);
+      this.encoderRegistry=new EncoderRegistry();
+      this.decoderRegistry=new ResourceDecoderRegistry();
+      this.resourceEncoderRegistry=new ResourceEncoderRegistry();
+      this.dataRewinderRegistry=new DataRewinderRegistry();
+      this.transcoderRegistry=new TranscoderRegistry();
+      this.imageHeaderParserRegistry=new ImageHeaderParserRegistry();
+      setResourceDecoderBucketPriorityList(Arrays.asList(BUCKET_GIF,BUCKET_BITMAP,BUCKET_BITMAP_DRAWABLE));
+    }
+    @NonNull
+    public <Data> Registry registry(@NonNull Class<Data> dataClass,@NonNull Encoder<Data> encoder){
+      return append(dataClass,encoder);
+    }
+    @NonNull
+    public <Data> Registry append(@NonNull Class<Data> dataClass,@NonNull Encoder<Data> encoder){
+      encoderRegistry.append(dataClass,encoder);
+      return this;
+    }
+    @NonNull
+    public <Data>Registry prepend(@NonNull Class<Data> dataClass,@NonNull Encoder<Data> encoder){
+      encoderRegistry.prepend(dataClass,encoder);
+      return this;
+    }
+    @NonNull
+    public <Data,TResource> Registry append(@NonNull Class<Data> dataClass,@NonNull Class<TResource> resourceClass,@NonNull ResourceDecoder<Data,TResource> decoder){
+      append(BUCKET_APPEND_ALL,dataClass,resourceClass,decoder);
+      return this;
+    }
+    @NonNull
+    public <Data,TRsource> Registry append(@NonNull String bucket,@NonNull Class<Data> dataClass,@NonNull Class<TResource> resourceClass,@NonNull ResourceDecoder<Data,TResource> decoder){
+      decoderRegistry.append(bucket,decoder,dataClass,resourceClass);
+      return this;
+    }
+    @NonNull
+    public <Data,TResource> Registry prepend(@NonNull Class<Data> dataClass,@NonNull Class<TResource> resourceClass,@NonNull ResourceDecoder<Data,TResource> decoder){
+      prepend(BUCKET_PREPEND_ALL,dataClass,resourceClass,decoder);
+      return this;
+    }
+    @NonNull
+    public <Data,TResource> Registry prepend(@NonNull String bucket,@NonNull Class<Data> dataClass,@NonNull Class<TResource> resourceClass,@NonNull ResourceDecoder<Data,TResource> decoder){
+      decoderRegistry.prepend(bucket,decoder,dataClass,resourceClass);
+      return this;
+    }
+    @NonNull
+    public final Registry setResourceDecoderBucketPriorityList(@NonNull List<String> buckets){
+      List<String> modifiedBuckets=new ArrayList<>(buckets);
+      modifiedBuckets.add(0,BUCKET_PREPEND_ALL);
+      modifiedBuckets.add(BUCKET_APPEND_ALL);
+      decoderRegistry.setBucketPriorityList(modifiedBuckets);
+      return this;
+    }
+    @NonNull
+    public <TResource> Registry registry(@NonNull Class<TResource> resourceClass,@NonNull ResourceEncoder<TResource> encoder){
+      return append(resourceClass,encoder);
+    }
+    @NonNull
+    public <TResource> Registry append(@NonNull Class<TResource> resourceClass,@NonNull ResourceEncoder<TResource> encoder){
+      resourceEncoderRegistry.append(resourceClass,encoder);
+      return this;
+    }
+    @NonNull
+    public <TResource> Registry prepend(@NonNull Class<TResource> resourceClass,@NonNull ResourceEncoder<TResource> encoder){
+      resourceEncoderRegistry.prepend(resourceClass,encoder);
+      return this;
+    }
+    @NonNull
+    public Registry register(@NonNull DataRewinder.Factory<?> factory){
+      dataRewinderRegistry.register(factory);
+      return this;
+    }
+    @NonNull
+    public <TResource,Transcode> Registry register(@NonNull Class<TResource> resourceClass,@NonNull Class<Transcode> transcodeClass,@NonNull ResourceTranscoder<TResource,Transcode> transcoder){
+      transcoderRegistry.register(resourceClass,transcoderClass,transcoder);
+      return this;
+    }
+    @NonNull
+    public Registry register(@NonNull ImageHeaderParser parser){
+      imageHeaderParserRegistry.add(parser);
+      return this;
+    }
+    @NonNull
+    public <Model,Data> Registry append(@NonNull Class<Model> modelClass,@NonNull Class<Data> dataClass,@NonNull ModelLoaderFactory<Model,Data> factory){
+      modelLoaderRegistry.append(modelClass,dataClass,factory);
+      return this;
+    }
+    @NonNull
+    public <Model,Data> Registry prepend(@NonNull Class<Model> modelClass,@NonNull Class<Data> dataClass,@NonNull ModelLoaderFactory<Model,Data> factory){
+      modelLoaderRegistry.prepend(modelClass,dataClass,factory);
+      return this;
+    }
+    @NonNull
+    public <Model,Data> Registry replace(@NonNull Class<Model> modelClass,@NonNull Class<Data> dataClass,@NonNull ModelLoaderFactory<? extends Model,? extends Data> factory){
+      modelLoaderRegistry.replace(modelClass,dataClass,factory);
+      return this;
+    }
+    @Nullable
+    public <Data,TResource,Transcode> LoadPath<Data,TResource,Transcode> getLoadPath(@NonNull Class<Data> dataClass,@NonNull Class<TResource> resourceClass,@NonNull Class<Transcode> transcodeClass){
+      LoadPath<Data,TResource,Transcode> result=loadPathCache.get(dataClass,resourceClass,transcodeClass);
+      if(loadPathCache.isEmptyLoadPath(result)){
+        return null;
+      }esle if(result==null){
+        List<DecodePath<Data,TResource,Transcode>> decodePaths=getDecoderPaths(dataClass,resourceClass,transcodeClass);
+        if(decodePaths.isEmpty()){
+          result=null;
+        }else{
+          result=new LoadPath<>(dataClass,resourceClass,transcodeClass,decodePaths,throwableListPool);
+        }
+        loadPathCache.put(dataClass,resourceClass,transcodeClass,result);
+      }
+      return resutl;
+    }
+  }
+```
 
 
 
