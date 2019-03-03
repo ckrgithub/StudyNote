@@ -4433,7 +4433,51 @@ DecodeHelper
   }
 
 ```
-
+Options:应用于内存和磁盘的一组键
+```java
+  public final class Options implements Key{
+    private final ArrayMap<Option<?>,Object> values=new CachedHashCodeArrayMap<>();
+    public void putAll(@NonNull Options other){
+      values.putAll((SimpleArrayMap<Options<?>,Object>)other.values);
+    }
+    @NonNull
+    public <T> Options set(@NonNull Option<T> option,@NonNull T value){
+      values.put(option,value);
+      return this;
+    }
+    @Nullable
+    public <T> T get(@NonNull Option<T> option){
+      return values.containKey(option)?(T)values.get(option):option.getDefaultValue();
+    }
+    @Override
+    public boolean equals(Object o){
+      if(o instanceof Options){
+        Options other=(Options)o;
+        return values.equals(other.values);
+      }
+      return false;
+    }
+    @Override
+    public int hashCode(){
+      return values.hashCode();
+    }
+    @Override
+    public void updateDiskCacheKey(@NonNull MessageDigest messageDigest){
+      for(int i=0;i<values.size();i++){
+        Option<?> key=values.keyAt(i);
+        Object value=values.valueAt(i);
+        updateDiskCacheKey(key,value,messageDigest);
+      }
+    }
+    @Override
+    public String toString(){
+      return "Options{values="+values+"}";
+    }
+    private static <T> void updateDiskCacheKey(@NonNull Option<T> option,@NonNull Object value,@NonNull MessageDigest md){
+      option.update((T)value,md);
+    }
+  }
+```
 
 
 
