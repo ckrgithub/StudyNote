@@ -4984,6 +4984,98 @@ Registry:管理组件注册以扩展或替换Glide默认的加载、解码和编
       }
       return resutl;
     }
+    @NonNull
+    private <Data,TResource,Transcode> List<DecodePath<Data,TResource,Transcode>> getDecodePaths(@NonNull Class<Data> dataClass,@NonNull Class<TResource> resourceClass,@NonNull Class<Transcode> transcodeClass){
+      List<DecodePath<Data,TResource,Transcode>> decodePaths=new ArrayList<>();
+      List<Class<TResource>> registeredResourceClasses=decoderRegistry.getResourceClasses(dataClass,resourceClass);
+      for(CLass<TResource> registeredResourceClass:registeredResourceClasses){
+        List<Class<Transcode>> registeredTranscodeClasses=transcodeRegistry.getTranscodeClasses(registeredResourceClass,transcodeClass);
+        for(Class<Transcode> registeredTranscodeClass : registeredTranscodeClasses){
+          List<ResourceDecoder<Data,TResource>> decoders=decoderRegistry.getDecoders(dataClass,registeredResourceClass);
+          ResourceTranscoder<TResource,Transcode> path=new DecodePath<>(dataClass,registeredResourceClass,registeredTranscodeClass,decoders,transcoder,throwableListPool);
+          decodePaths.add(path);
+        }
+      }
+      return decodePaths;
+    }
+    @NonNull
+    public <Model,TResource,Transcode> List<Class<?>> getRegisteredResourceClasses(@NonNull Class<Model> meodelClass,@NonNull Class<TResource> resourceClass,@NonNull Class<Transcode> transcodeClass){
+      List<Class<?>> result=modelToResourceClassCache.get(modelClass,resourceClass);
+      if(result==null){
+         result=new ArrayList<>();
+         List<Class<?>> dataClasses=modelLoaderRegistry.getDataClasses(modelClass);
+         for(Class<?> dataClass: dataClasses){
+            List<? extends Class<?>> registeredResourceClasses=decoderRegistry.getResourceClasses(dataClass,resourceClass);
+            for(Class<?> registeredResourceClass: registeredResourceClasses){
+              List<Class<Transcode>> registeredTranscodeClasses=transcoderRegistry.getTranscodeClasses(registeredResourceClass,transcodeClass);
+              if(!registeredTranscodeClasses.isEmpty()&&!result.contians(registeredResourceClass)){
+                result.add(registeredResourceClass);
+              }
+            }
+         }
+         modelToResourceClassCache.put(modelClass,resourceClass,Collections.unmodifiableList(result));
+      }
+      return result;
+    }
+    public boolean isResourceEncoderAvailable(@NonNull Resource<?> resource){
+      return resourceEncoderRegistry.get(resource.getResourceClass())!=null;
+    }
+    @NonNull
+    public <X> ResourceEncoder<X> getResultEncoder(@NonNull Resource<X> resource)throws NoResultEncoderAvailableException{
+      ResourceEncoder<X> resourceEncoder=resourceEncoderRegistry.get(resource.getResourceClass());
+      if(resourceEncoder!=null){
+        return resourceEncoder;
+      }
+      throw new NoResultEncoderAvailableException(resource.getResourceClass());
+    }
+    @NonNull
+    public <X> Encoder<X> getSourceEncoder(@NonNull X data) throws NoSourceEncoderAvailableException{
+      Encoder<X> encoder=encoderRegistry.getEncoder((Class<X>) data.getClass());
+      if(encoder!=null){
+        return encoder;
+      }
+      throw new NoSourceEncoderAvailableException(data.getClass());
+    }
+    @NonNull
+    public <X> DataRewinder<X> getRewinder(@NonNull X data){
+      return dataRewinderRegistry.build(data);
+    }
+    @NonNull
+    public <Model> List<ModelLoader<Model,?>> getModelLoaders(@NonNull Model model){
+      List<ModelLoader<Model,?>> result=modelLoaderRegistry.getModelLoaders(model);
+      if(result.isEmpty()){
+        throw new NoModelLoaderAvailableException(model);
+      }
+      return result;
+    }
+    public static class NoModelLoaderAvailableException extends MissingComponentExeption{
+      public NoModelLoaderAvailableException(@NonNull Object model){
+        super("Failed to find any ModelLoaders for model: "+model);
+      }
+      public NoModelLoaderAvailableException(@NonNull Class<?> modelClass,@NonNull Class<?> dataClass){
+        super("Failed to find any ModelLoaders for model:  "+modelClass+" and data:  "+dataClass);
+      }
+    }
+    public static class NoResultEncoderAvailableException extends MissingComponentException{
+      public NoResultEncoderAvailableException(@NonNull Class<?> resourceClass){
+        super("Failed to find result encoder for resource class:  "+resourceClass+",you may need to consider registering a new Encoder for the requested type or DiskCacheStrategy.DATA/DiskCacheStrategy.NONE if caching your transformed resource is unnecessary");
+      }
+    }
+    public static class NoSourceEncoderAvailableExeption extends MissingComponentException{
+      public NoSourceEncoderAvailableException(@NonNull Class<?> dataClass){
+        super("Fialed to find source encoder for data class: "+dataClass);
+      }
+    }
+    public static class MissingComponentException extends RuntimeException{
+      public MissingComponentException(@NonNull String message){
+        super(message);
+      }
+    }
+    public static final class NoImageHeaderParserException extends MissingComponentException{
+      public NoImageHeaderParserException(){
+        super("Failed to find image header parder");
+      }
+    }
   }
 ```
 
