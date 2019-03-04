@@ -5137,6 +5137,135 @@ TransitionOptions:当加载完成时，设置要在资源上使用的转换
     }
   }
 ```
+ImageViewTargetFactory:给定View的子类，生成一个正确的target类型
+```java
+  public class ImageViewTargetFactory{
+    @NonNull
+    public <Z> ViewTarget<ImageView,Z> buildTarget(@NonNull ImageView view,@NonNull Class<Z> clazz){
+      if(Bitmap.class.equals(clazz)){
+        return (ViewTarget<ImageView,Z>) new BitmapImageViewTarget(view);
+      }else if(Drawable.class.isAssignableFrom(clazz)){
+        return (ViewTarget<ImageView,Z>) new DrawableImageViewTarget(view);
+      }else{
+        throw new IllegalArgumentException("Unhandled class: "+clazz+", try  as*(Class) transcode(ResourceTranscoder)");
+      }
+    }
+  }
+```
+BitmapImageViewTarget
+```java
+  public class BitmapImageViewTarget extends ImageViewTarget<Bitmap>{
+    public BitmapImageViewTarget(ImageView view){
+      super(view);
+    }
+    public BitmapImageViewTarget(ImageView view, boolean waitForLayout){
+      super(view,waitForLayout);
+    }
+    @Override
+    protected void setResource(Bitmap resource){
+      view.setImageBitmap(resource);
+    }
+  }
+```
+ImageViewTarget
+```java
+  public abstract class ImageViewTarget<Z> extends ViewTarget<ImageView,Z> implements Transition.ViewAdapter{
+    @Nullable
+    private Animatable animatable;
+    public ImageViewTarget(ImageView view){
+      super(view);
+    }
+    public ImageViewTarget(ImageView view,boolean waitForLayout){
+      super(view,waitForLayout);
+    }
+    @Override
+    @Nullable
+    public Drawable getCurrentDrawable(){
+      return view.getDrawable();
+    }
+    @Override
+    public void setDrawable(Drawable drawable){
+      view.setImageDrawable(drawable);
+    }
+    @Override
+    public void onLoadStarted(@Nullable Drawable placeholder){
+      super.onLoadStarted(placeholder);
+      setResourceInternal(null);
+      setDrawable(placeholder);
+    }
+    @Override
+    public void onLoadFailed(@Nullable Drawable errorDrawable){
+      super.onLoadFailed(errorDrawable);
+      setResourceInternal(null);
+      setDrawable(errorDrawable);
+    }
+    @Override
+    public void onLoadCleared(@Nullable Drawable placeholder){
+      super.onLoadCleared(placeHolder);
+      if(animatable!=null){
+        animatable.stop();
+      }
+      setResourceInternal(null);
+      setDrawable(placeholder);
+    }
+    @Override
+    public void onResourceReady(@NonNull Z resource,@Nullable Transition<? super Z> transition){
+      if(transition==null||!transition.transition(resource,this)){
+        setResourceInternal(resource);
+      }else{
+        maybeUpdateAnimatable(resource);
+      }
+    }
+    @Override
+    public void onResourceReady(@NonNull Z resource,@Nullable Transition<? super Z> transition){
+      if(transition==null||!transition.transition(resource,this)){
+        setResourceInternal(resource);
+      }else{
+        maybeUpdateAnimatable(resource);
+      }
+    }
+    @Override
+    public void onStart(){
+      if(animatable!=null){
+        animatable.start();
+      }
+    }
+    @Override
+    public void onStop(){
+      if(animatable!=null){
+        animatable.stop();
+      }
+    }
+    private void setResourceInternal(@Nullable Z resource){
+      setResource(resource);
+      maybeUpdateAnimatable(resource)
+    }
+    private void maybeUpdateAnimatable(@Nullable Z resource){
+      if(resource instanceof Animatable){
+        animatable=(Animatable)resource;
+        animatable.start();
+      }else{
+        aniamtable=null;
+      }
+    }
+    protected abstract void setResource(@Nullable Z resource);
+  }
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
