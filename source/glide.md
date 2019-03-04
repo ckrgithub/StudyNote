@@ -5078,8 +5078,65 @@ Registry:管理组件注册以扩展或替换Glide默认的加载、解码和编
     }
   }
 ```
-
-
+GenericTransitionOptions:通用的转换选项
+```java
+  public final class GenericTransitionOptions<TranscodeType> extends TransitionOptions<GenericTransitionOptions<TranscodeType>,TranscodeType>{
+    public GenericTransitionOptions(){}
+    @NonNull
+    public static <TranscodeType> GenericTransitionOptions<TranscodeType> withNoTransition(){
+      return (GenericTransitionOptions)(new GenericTransitionOptions()).dontTransition();
+    }
+    @NonNull
+    public static <TranscodeType> GenericTransitionOptions<TranscodeType> with(int viewAniamtionId){
+      return (GenericTransitionOptions)(new GenericTransitionOptions()).transition(viewAnimationId);
+    }
+    @NonNull
+    public static <TranscodeType> GenericTransitionOptions<TranscodeType> with(@NonNull Animator animator){
+      return (GenericTransitionOptions)(new GenericTransitionOptions()).transition(animator);
+    }
+    @NonNull
+    public static <TranscodeType> GenericTransitionOptions<TranscodeType> with(@NonNull TransitionFactory<? super TranscodeType> transitionFactory){
+      return (GenericTransitionOptions)(new GenericTransitionOptions()).transition(transitionFactory);
+    }
+  }
+```
+TransitionOptions:当加载完成时，设置要在资源上使用的转换
+```java
+  public abstract class TransitionOptions<CHILD extends TransitionOptions<CHILD,TranscodeType>,TranscodeType> implements Cloneable{
+    private TransitionFactory<? super TranscodeType> transitionFactory=NoTransition.getFactory();
+    @NonNull
+    public final CHILD dontTransition(){
+      return transition(NoTransition.getFactory());
+    }
+    @NonNull
+    public final CHILD transition(int viewAnimationId){
+      return transition(new ViewAnimationFactory<>(viewAnimationId));
+    }
+    @NonNull
+    public final CHILD transition(@NonNull ViewPropertyTransition.Animator animator){
+      return transition(new ViewPropertyAnimationFactory<>(animator));
+    }
+    @NonNull
+    public final CHILD transition(@NonNull TransitionFactory<? super TranscodeType> transitionFactory){
+      this.transitionFactory=Preconditions.checkNotNull(transitionFactory);
+      return self();
+    }
+    @Override
+    public final CHILD clone(){
+      try{
+        return (CHILD)super.clone();
+      }catch(CloneNotSupportedException e){
+        throw new RuntimeException(e);
+      }
+    }
+    final TransitionFactory<? super TranscodeType> getTransitionFactory(){
+      return transitionFactory;
+    }
+    private CHILD self(){
+      return (CHILD)this;
+    }
+  }
+```
 
 
 
