@@ -5251,8 +5251,127 @@ ImageViewTarget
     protected abstract void setResource(@Nullable Z resource);
   }
 ```
-
-
+ViewTarget:
+```java
+  public abstract class ViewTarget<T extends View,Z> extends BaseTarget<Z>{
+    private static final String TAG="ViewTarget";
+    private static boolean isTagUsedAtLeastOnce;
+    @Nullable private static Integer tagId;
+    protected final T view;
+    private final SizeDeterminer sizeDeterminer;
+    @Nullable private OnAttachStateChangeListener attachStateListener;
+    private boolean isClearedByUs;
+    private boolean isAttachStateListenerAdded;
+    public ViewTarget(@NonNull T view){
+      this.view=Preconditions.checkNotNull(view);
+      sizeDeteminer=new SizeDeterminer(view);
+    }
+    public ViewTarget(@NonNull T view,boolean waitForLayout){
+      this(view);
+      if(waitForLayout){
+        waitForLayout();
+      }
+    }
+    @NonNull
+    public final ViewTarget<T,Z> clearOnDetach(){
+      if(attachStateListener!=null){
+        return this;
+      }
+      attachStateListener=new OnAttachStateChangeListener(){
+        @Override
+        public void onViewAttachedToWindow(View v){
+          resumeMyRequest();
+        }
+        @Override
+        public void onViewDetachedFromWindow(View v){
+          pauseMyRequest();
+        }
+      };
+      maybeAddAttachStateListener();
+      return this;
+    }
+    void resumeMyRequest(){
+      Request request=getRequest();
+      if(request!=null&&request.isCleared()){
+        request.begin();
+      }
+    }
+    void pauseMyRequest(){
+      Request request=getRequest();
+      if(request!=null){
+        isClearedByUs=true;
+        request.clear();
+        isClearedByUs=false;
+      }
+    }
+    @NonNull
+    public final ViewTarget<T,Z> waitForLayout(){
+      sizeDeterminer.waitForLayout=true;
+      return this;
+    }
+    @CallSuper
+    @Override
+    public void onLoadStarted(@Nullable Drawable placeholder){
+      super.onLoadStarted(placeholder);
+      maybeAddAttachStateListener();
+    }
+    private void maybeAddAttachStateListener(){
+      if(attachStateListener==null||isAttachStateListenerAdded){
+        return;
+      }
+      view.addOnAttachStateChangeListener(attachStateListener);
+      isAttachStateListenerAdded=true;
+    }
+    private void maybeRemoveAttachStateListener(){
+      if(attachStateListener==null||!isAttachStateListenerAdded){
+        return ;
+      }
+      view.removeOnAttachStateChangeListener(attachStateListener);
+      isAttachStateListenerAdded=false;
+    }
+    @NonNull
+    public T getView(){
+      return view;
+    }
+    @CallSuper
+    @Override
+    public void getSize(@NonNull SizeReadyCallback cb){
+      sizeDeterminer.getSize(cb);
+    }
+    @CallSuper
+    @Override
+    public void removeCallback(@NonNull SizeReadyCallback cb){
+      sizeDeterminer.removeCallback(cb);
+    }
+    @CallSuper
+    @Override
+    public void onLoadCleared(@Nullable Drawable placeholder){
+      super.onLoadCleared(placeholder);
+      sizeDeterminer.clearCallbacksAndListener();
+      if(!isClearedByUs){
+        maybeRemoveAttachStateListener();
+      }
+    }
+    @Override
+    public void setRequest(@Nullable Request request){
+      setTag(request);
+    }
+    @Override
+    @Nullable
+    public Request getRequest(){
+      Object tag=getTag();
+      Request reques=null;
+      if(tag!=null){
+        if(tag instanceof Request){
+          request=(Request)tag;
+        }else{
+          throw new IllegalArgumentException("You must not call setTag() on a view Glide is targeting");
+        }
+      }
+      return request;
+    }
+  }
+```
 
 
 
