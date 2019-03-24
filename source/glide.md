@@ -5372,7 +5372,195 @@ ViewTarget:
     }
   }
 ```
-
+RequestManagerRetriever:创建新的RequestManager或者从activities和fragment中取已存在的RequestManger的静态方法集合
+```java
+  public class RequestManagerRetriever implements Handler.Callback{
+    static final String FRAGMENT_TAG="com.bumptech.glide.manger";
+    private static final String TAG="RMRetriever";
+    private static final int ID_REMOVE_FRAGMENT_MANAGER=1;
+    private static final int ID_REMOVE_SUPPORT_FRAGMNET_MANAGER=2;
+    private static final String FRAGMENT_INDEX_KEY="key";
+    private volatile RequestManager applicationManager;
+    final Map<android.app.FragmentManager,RequestManagerFragment> pendingRequestManagerFragments=new HashMap<>();
+    final Map<FragmentManager,SupportRequestMangerFragment> pendingSupportRequestManagerFragments=new HashMap<>();
+    private final Handler handler;
+    private final RequestManagerFactory factory;
+    private final ArrayMap<View,Fragment> tempViewToSupportFragment = new ArrayMap<>();
+    private final ArrayMap<View,android.app.Fragment> tempViewToFragment=new ArrayMap<>();
+    private final Bundle tempBundle=new Bundle();
+    
+    public RequestManagerRetriever(@Nullable RequestManagerFactory factory){
+      this.factory=factory!=null?factory:DEFAULT_FACTORY;
+      handle=new Handler(Looper.getMainLooper(),this);
+    }
+    @NonNull
+    private RequestManager getApplicationManager(@NonNull Context context){
+      if(applicationManger==null){
+        synchronized(this){
+          if(applicationManager==null){
+            Glide glide=Glide.get(context.getApplicationContext());
+            applicationManager=factory.build(glide,new ApplicationLifecycle(),new EmptyRequestManagerTreeNode(),context.getApplicationContext());
+          }
+        }
+      }
+    }
+    @NonNull
+    public RequestManager get(@NonNull Context context){
+      if(context==null){
+        throw new IllegalArgumentException("You cannot start a load on a null Context");
+      }else if(Util.isOnMainThread()&&!(context instanceof Application)){
+        if(context instanceof FragmentActivity){
+          return get((FragmentActivity)context);
+        }else if(context instanceof Activity){
+          return get((Activity)context);
+        }else if(context instanceof ContextWrapper){
+          return get(((ContextWrapper)context).getBaseContext());
+        }
+      }
+      return getApplicationManager(context);
+    }
+    @NonNull
+    public RequestManger get(@NonNull FragmentActivity activity){
+      if(Util.isOnBackgroundThread()){
+        return get(activity.getApplicationContext());
+      }else{
+        assertNotDestroyed(activity);
+        FragmentManager fm=activity.getSupportFragmentManager();
+        return supportFragmentGet(activity,fm,null,isActivityVisible(activity));
+      }
+    }
+    @NonNull
+    public RequestManager get(@NonNull Fragment fragment){
+      Preconditions.checkNotNull(fragment.getActivity(),"You cannot start a load on a fragment before it is attached or after it is destroyed");
+      if(Util.isOnBackgroundThread()){
+        return get(fragment.getActivity().getApplicationContext());
+      }else{
+        FragmentManager fm = fragment.getChildFragmentManager();
+        return supportFragmentGet(fragment.getActivity(),fm,fragment,fragment.isVisible());
+      }
+    }
+    @NonNull
+    public RequestManager get(@NonNull Activity activity){
+      if(Util.isOnBackgroundThread()){
+        return get(activity.getApplicationContext());
+      }else{
+        assertNotDestroyed(activity);
+        android.app.FragmentManager fm=activity.getFragmentManager();
+        return fragmentGet(activity,fm,null,isActivityVisible(activity));
+      }
+    }
+    @NonNull
+    public RequestManager get(@NonNull View view){
+      if(Util.isOnBackgroundThread()){
+        return get(view.getContext().getApplicationContext());
+      }
+      Preconditions.checkNotNull(view);
+      Preconditions.checkNotNull(view.getContext(),"Unable to obtain a request manager for a view without a Context");
+      Activity activity=findActivity(view.getContext());
+      if(activity==null){
+        return get(view.getContext().getApplicationContext());
+      }
+      if(activity instanceof FragmentActivity){
+        Fragment fragment=findSupportFragment(view,(FragmentActivity)activity);
+        return fragment!=null?get(fragment):get(activity);
+      }
+      android.app.Fragment fragment = findFragment(view,activity);
+      if(fragment==null){
+        return get(activity);
+      }
+      return get(fragment);
+    }
+    private static void findAllSupportFragmentsWithViews(@Nullable Collection<Fragment> topLevelFragments,@NonNull Map<View,Fragment> result){
+      if(topLevelFragments==null){
+        return;
+      }
+      for(Fragment fragment: topLevelFragments){
+        if(fragment==null||fragment.getView()==null){
+          continue;
+        }
+        result.put(fragment.getView(),fragment);
+        findAllSupportFragmentsWithViews(fragment.getChildFragmentManager().getFragments(),result);
+      }
+    }
+    @Nullable
+    private Fragment findSupportFragment(@NonNull View target,@NonNull FragmentActivity activity){
+      tempViewToSupportFragment.clear();
+      findAllSupportFragmentsWithViews(activity.getSupportFragmentManager().getFragments(),tempViewToSupportFragment);
+      Fragment result=null;
+      View activityRoot=activity.findViewById(android.R.id.content);
+      View current=target;
+      while(!current.equals(activityRoot)){
+        result=tempViewToSupportFragment.get(current);
+        if(result!=null){
+          break;
+        }
+        if(current.getParent() instanceof View){
+          current=(View) current.getParent();
+        }else{
+          break;
+        }
+      }
+      tempViewToSupportFragment.clear();
+      return result;
+    }
+    @Nullable
+    private android.app.Fragment findFragment(@NonNull View target,@NonNull Activity activity){
+      tempViewToFragment.clear();
+      findAllFragmentsWithViews(activity.getFragmentManager(),tempViewToFragment);
+      android.app.Fragment result=null;
+      View activityRoot=activity.findViewById(android.R.id.content);
+      View current=target;
+      while(!current.equals(activityRoot)){
+        result=tempViewToFragment.get(current);
+        if(result!=null){
+          break;
+        }
+        if(current.getParent instanceof View){
+          current=(View)current.getParent();
+        }else{
+          break;
+        }
+      }
+      tempViewToFragment.clear();
+      return result;
+    }
+    @TargetApi(Build.VERSION_CODES.O)
+    private void findAllFragmentsWithViews(@NonNull android.app.FragmentManager fragmentManager,@NonNull ArrayMap<View,android.app.Fragment> result){
+      if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.O){
+        for(android.app.Fragment fragment:fragmentManger.getFragments()){
+          if(fragment.getView()!=null){
+            result.put(fragment.getView(),fragment);
+            findAllFragmentsWithViews(fragment.getChildFragmentManager(),result);
+          }
+        }
+      }else{
+        findAllFragmentsWithViewsPreO(fragmentManager,result);
+      }
+    }
+    private void findAllFragmentsWithViewsPreO(@NonNull android.app.FragmentManager fragmentManager,@NonNull ArrayMap<View,android.app.Fragment> result){
+      int index=0;
+      while(true){
+        tempBundle.putInt(FRAGMENT_INDEX_KEY,index++);
+        android.app.Fragment fragment=null;
+        try{
+          fragment=fragmentManager.getFragment(tempBundle,FRAGEMNT_INDEX_KEY);
+        }catch(Exception e){
+          
+        }
+        if(fragment==null){
+          break;
+        }
+        if(fragment.getView()!=null){
+          result.put(fragment.getView(),fragment);
+          if(VERSION.SDK_INT>=VERSION_CODES.JELLY_BEAN_MR1){
+              findAllFragmentsWithViews(fragment.getChildFragmentManager(),result);
+          }
+        }
+      }
+    }
+    
+  }
+```
 
 
 
