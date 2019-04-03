@@ -34,5 +34,15 @@
   }
   
 ```
+## ColorStateList
+```java
+  int[][] states=new int[3][];
+  states[0]=new int[]{android.R.attr.state_enabled,android.R.attr.state_pressed};
+  states[1]=new int[]{android.R.attr.state_enabled};
+  states[2]=new int[]{-android.R.attr.state_enabled}
+  int[] colors=new int[]{mTextColorPressed,mTextColorNormal,mTextColorUnable};
+  ColorStateList colorStateList=new ColorStateList(states,colors);
+  mView.setTextColor(mTextColorStateList);
+```
 
 
