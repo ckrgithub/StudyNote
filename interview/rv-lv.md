@@ -1,0 +1,7 @@
+# RecyclerView与ListView的区别
+* 从布局效果对比：RecyclerView能带给效果要比ListView强大得多，RecyclerView在使用过程中，比ListView多个setLayoutManager步骤，这个LayoutManager就是用于控制我们RecyclerView最终的展示效果。。Android默认提供的RRecyclerView就能支持线性布局、网格布局、瀑布流布局三种，而且同时还能控制横向还是纵向滚动。
+* 动画效果：RecyclerView实现自定义动画效果，RecyclerView在做局部刷新的时候有一个渐变的动画效果。而ListView的Item加动画，我们只能通过属性动画来操作Item的视图。
+* 缓存不同：RecyclerView比ListView多两级缓存，支持多个ItemView缓存，支持开发者自定义缓存处理逻辑，支持所有RecyclerView共用同一个RecyclerViewPool(缓存池)
+  * 1.mActiveViews和mAttachedScrap功能相似，意义在于快速重用屏幕上可见的列表项ItemView，而不需要重新createView和bindView
+  * 2.mScrapView和mCachedViews+mRecyclerViewPool功能相似，意义在于缓存离开屏幕的ItemView，目的是让即将进入屏幕的ItemView重用。
+  * 3.RecyclerView优势在于，mCachedViews的使用，可以做到屏幕外的列表项ItemView进入屏幕内时也无须bindView快速重用；mRecyclerViewPool可以提供多个RecyclerView共同使用，在特定场景下，如viewpager+多个列表页下有优势
