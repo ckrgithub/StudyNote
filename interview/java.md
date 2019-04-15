@@ -357,10 +357,28 @@ Math.round(11.5)返回值是12，Math.round(-11.5)返回值是-11.四舍五入�
 # 当一个对象被当作参数传递到一个方法后，此方法可改变这个对象的属性，并可返回变化后的结果，那么这里到底是值传递还是引用传递？
 是值传递。java编程语言只有值传递参数。当一个对象实例作为一个参数被传递到方法时，参数的值就是对该对象的引用。对象的属性可以在被调用过程中改变，但对象的引用是永远不会改变的。
 
+# String和StringBuilder、StringBuffer的区别
+String、StringBuilder、StringBuffer可以储存和操作字符串。其中，String是只读字符串，意味着String引用的字符串内容是不能被改变的。而StringBuffer和StringBuilder类表示的字符串对象可以直接进行修改。StringBuilder是JDK1.5中引入的，它和StringBuffer的方法完全相同，区别在于它是在单线程环境下使用的，因为它的所有方面没有被synchronized修饰，因此它的效率也比StringBuffer略高。补充：如果连接后得到的字符串在静态存储区中是早已存在的，那么用+做字符串连接是优于StringBuffer/StringBuilder的append方法的。
+```java
+  public static void main(String[] args){
+    String a="Programming";
+    String b=new String("Programming");
+    String c="Program"+"ming";
+    System.out.println(a==b);//false
+    System.out.println(a==c);//true
+    System.out.println(a.equals(b));//true
+    System.out.println(a.equals(c));//true
+    System.out.println(a.intern()==b.intern());//true
+  }
+```
 
+# 重载(overload)和重写(override)的区别。重载方法能否根据返回类型进行区分？
+方法的重载和重写都是实现多态的方式，区别在于前者实现的是编译时的多态性，而后者实现的是运行时的多态性。重载发生在一个类中，同名的方法如果有不同的参数列表(参数类型不同、参数个数不同或者二者都不同)则视为重载；重写发生在子类和父类之间，重写要求子类被重写方法与父类被重写方法有相同的返回类型，比父类被重写方法更好访问，不能比父类被重写方法声明更多的异常。重载对返回类型没有特殊要求。
 
-
-
+# 描述一下jvm加载class文件的原理机制
+JVM中类的装载是由类加载器(ClassLoader)和它的子类来实现的，Java中的类加载器是一个重要的java运行时系统组件，他负责在运行时查找和装入类文件中的类。
+* 由于java的跨平台性，经过编译的java源程序并不是一个可执行程序，而是一个或多个类文件。当java程序需要使用某个类时，JVM会确保这个类已经被加载、连接(验证、准备和解析)和初始化。类的加载是指把类的.class文件中的数据读入到内存中，通常是创建一个字节数组读入.class文件，然后产生与所加载类对应的Class对象。加载完后，Class对象还不完整，所以此时的类还不可用。当类被加载后就进入连接阶段，这一阶段包括验证、准备(为静态变量分配内存并设置默认的初始值)和解析(将符号引用替换为直接引用)三个步骤。最后JVM对类进行初始化，包括：1.如果类存在直接的父类并且这个类还没有被初始化，那么就先初始化父类；2.如果类中存在初始化语句，就依次执行这些初始化语句。
+* 类的加载是由类加载器完成的，类加载器包括：根加载器(BootStrap)、扩展加载器(Extension)、系统加载器(System)和用户定义类加载器(java.lang.ClassLoader的子类)。从jdk1.2开始，类加载过程采取了父亲委托机制(PDM)。PDM更好保证了java平台的安全性，在该机制中，JVM自带的BootStrap是根加载器，其他加载器都有且仅有一个父类加载器。类的加载首先请求父类加载器加载，父类加载器无能为力时，才由其子类加载器自行加载。
 
 
 
