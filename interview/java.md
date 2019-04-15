@@ -81,9 +81,9 @@ Annotation注解是代码里的特殊标记，是java5.0后的一个新特性。
     mt.invoke(clazz.newInstance(),url,username,password);
   }
 ```
-## junit测试框架
+# junit测试框架
 JUnit是由Erich Gamma 和 Kent Beck编写的一个回归测试框架。Junit测试是程序员测试，即所谓白盒测试，因为程序员知道被测试的软件如何完成功能和完成什么样的功能。
-### 怎么用
+## 怎么用
 测试一个方法是否正常
 ```java
   import org.junit.After;
@@ -161,11 +161,11 @@ public static void after(){
     assertNull(user);
   }
 ```
-## 枚举
+# 枚举
 枚举是一个特殊的java类，用关键字enum表示，不用class
-### 作用
+## 作用
 枚举可以限定外部能使用的类的对象，从而提高程序的安全性
-### 怎么用
+## 怎么用
 外部直接用类名打点调获取对象，并调用类成员
 ```java
   //不带构造方法的枚举
@@ -182,19 +182,19 @@ public static void after(){
   }
 
 ```
-#### 枚举常用的特有方法
+### 枚举常用的特有方法
 * String name()返回此枚举常量的名称，在其枚举声明中对其进行声明。如：Print.A.name()=="A";
 * int ordinal()返回此枚举常量的索引(它在枚举声明中的位置，其中初始常量序数为零)。public static <T extends Enum<T>> T valueOf(Class<T> enumType,String name)返回带指定名称的指定枚举类型的枚举常量。
-#### 特点
+### 特点
 * 枚举构造方法必须私有
 * 声明枚举，必须在类里的首行，枚举间用逗号隔开，如果还有其它代码则最后一个枚举后必须加分号
 * 枚举有类的特性，可以声明属性和方法，也可以实现接口和继承抽象类
 * JDK1.5后，switch可以接收枚举类型
 * 如果枚举只有一个值时，可以当单例用。
 
-## 反射机制
+# 反射机制
 Java反射机制是在运行状态中，对于任意一个类，都能够知道这个类的所有属性和方法；对于任意一个对象，都能够调用它的任意一个方法和属性；这种动态获取的信息以及动态调用对象的方法的功能称为java语言的反射机制
-### 怎么用
+## 怎么用
 获取字节码对象的三种方法：
 
 1.Object类中的getClass()方法：必须明确具体的类，并创建对象
@@ -213,7 +213,7 @@ Java反射机制是在运行状态中，对于任意一个类，都能够知道�
   String className="com.ckr.bean.Person";
   Class clazz=Class.forName(className);
 ```
-#### 获取构造方法得到对象
+### 获取构造方法得到对象
 当只需要获得无参构造成的对象
 ```java
   String name="com.ckr.bean.Person";
@@ -232,7 +232,7 @@ Java反射机制是在运行状态中，对于任意一个类，都能够知道�
   //Constructor constructor=clazz.getConstructor(new Class[]{String.class,int.class});
   Object obj=constructor.newInstance("ckr",18);
 ```
-#### 获取和改变成员字段的属性
+### 获取和改变成员字段的属性
 公共(public)字段获取
 ```java
   Field field=null;
@@ -248,7 +248,7 @@ Java反射机制是在运行状态中，对于任意一个类，都能够知道�
   field.set(obj,18);
   Oject obj2=field.get(obj);//获取改过字段后的对象
 ```
-#### 获取和运行成员方法
+### 获取和运行成员方法
 ```java
   Class clazz=Class.forName("com.ckr.bean.Person");
   Method method=clazz.getMethod("paramMethod",String.class,int.class);
@@ -258,12 +258,104 @@ Java反射机制是在运行状态中，对于任意一个类，都能够知道�
   method.invoke(clazz.newInstance(),url,username,password);
 ```
 
+# 面向对象的特征
+* 1.抽象：抽象是将一类对象的共同特征总结出来构造类的过程，包括数据抽象和行为抽象两方面。抽象只关注对象有哪些属性和行为，并不关注这些行为的细节是什么
+* 2.继承：继承是从已有类得到继承信息创建新类的过程。提供继承信息的类被称为父类；得到继承信息的类被称为子类。
+* 3.封装：通常认为封装是把数据和操作数据的方法绑定起来，对数据的访问只能通过已定义的接口。
+* 4.多态：多态是指允许不同子类型的对象对同一消息作出不同的响应。多态性分为编译时的多态性和运行时的多态性。方法重载(overload)实现的是编译时的多态性(也称为前绑定)，而方法重写(override)实现的是运行时的多态性(也称为后绑定)。
 
+# 访问修饰符public,protected,private,以及不写(默认)时的区别
+|作用域|当前类|同包|子类|其他|
+|---|---|---|---|---|
+|public|y|y|y|y|
+|protected|y|y|y|n|
+|default|y|y|x|x|
+|private|y|x|x|x|
 
+类的成员不写访问修饰时默认为default。默认对于同一个包中的其他类相当于公开(public),对于不是同一个包中的其他类相当于私有(private)。受保护(protected)对子类相当于公开，对于不是同一包中的没有父子关系的类相当于私有
 
+# String是最基本数据类型么
+不是。java中基本数据类型只有8个：byte,short,int,long,float,double,boolean,char;除了基本类型和枚举类型，剩下的都是引用类型
 
+# float f=3.4是否正确
+不正确。3.4是双精度数，将双精度型赋值给浮点型属于下转型，会造成精度损失，因此需要强制类型转换float f=3.4F;
 
+# short s1=1;s1=s1+1;有错么？short s1=1;s1 +=1;有错么
+对于s1=s1+1;由于1是int类型，因此s1+1运算结果也是int类型，需要强制转换类型才能赋值给short类型。而s1 +=1;可以正确编译，因为s1 +=1相当于s1=(short)(s1+1);其中有隐含的强制类型转换.
 
+# int和integer有什么区别
+java是一个近乎纯洁的面向对象编程语言，但是为了编程的方便还是引入不是对象的基本数据类型，但是为了能够将这些基本数据类型当成对象操作，java为每个基本数据类型都引入了对应的包装类型(wrapper class)，int包装类就是integer，从jdk1.5开始引入自动装箱/拆箱机制，使得两者可以相互转换。
+```java
+  public static void main(String[] args){
+    Integer a=new Integer(2);
+    Integer b=2;
+    int c=2;
+    System.out.println(a==b);//false，两个引用没有引用同一对象
+    System.out.println(a==c);//true，a自动拆箱成int类型，再和c比较
+    
+    Integer f1=100,f2=100,f3=150,f4=150;
+    System.out.println(f1==f2);//true
+    System.out.println(f3==f4);//false
+  }
+
+```
+首先注意f1,f2,f3,f4四个变量都是Integer对象，所以下面的==运算比较的不是值而是引用。装箱的本质是什么呢？当我们给一个Integer对象赋一个int值的时候，会调用Integer类的静态方法valueOf：
+```java
+  public static Integer valueOf(int i){
+    if(i>=IntegerCache.low&&i<=IntegerCache.high){
+      return IntegerCache.cache[i+(-IntegerCache.low)]
+    }
+    return new Integer(i);
+  }
+
+```
+如果字面量的值在-128到127之间，那么不会new新的Integer对象，而是直接引用常量池中的Integer对象.
+
+# &和&&的区别
+&运算符有两种用法：按位与；逻辑与。&&运算符是短路与运算。&&之所以称为短路运算，是因为如果&&左边的表达式的值是false，右边的表达式会被直接短路掉，不会进行运算。
+
+# 解释内存中的栈(stack)、堆(heap)和静态存储区的用法。
+通常定义一个基本数据类型的变量，一个对象的引用，还有函数调用的现场保存都使用内存中的栈空间；而通过new 关键字和构造器创建的对象放在堆空间；程序中的字面量,如直接书写的100，"hello"和常量都是放在静态存储区中。栈空间操作最快但也很小，通常大量的对象都是放在堆空间，整个内存包括硬盘上的虚拟内存都可以被当成堆空间来使用。
+```java
+  String str= new String("hello");
+  //str放在栈上，用new创建出来的字符串对象放在堆上，而"hello"这个字面量放在静态存储区。
+```
+
+# Math.round(11.5)等于多少？Math.round(-11.5)等于多少？
+Math.round(11.5)返回值是12，Math.round(-11.5)返回值是-11.四舍五入原理是在参数上加0.5,然后进行下取整。
+
+# switch是否能作用在byte上，是否能作用在long上，是否能作用在String上？
+早起JDk中，switch(expr)中，expr可以是byte,char,short,int。从1.5版本开始，引入枚举类型，expr也可以是枚举，从jdk1.7开始，可以是String。长整型(long)是不可以的
+
+# 用最有效率的方法计算2乘以8
+2<<3(左移3相当于乘以2的3次方)。我们为编写类重写hashCode方法时，不太理解为什么要使用这样的乘法运算来产生哈希码，而且为什么这个数是个素数，为什么通常选择31这个数？选择31是因为可以用移位和减法运算来代替乘法，从而得到更好的性能。如：31*num--> (num<<5)-num
+
+# 数组有没有length()方法？String有没有length()方法？
+数组没有length()方法，有length属性。String有length()方法。
+
+# 在java中，如何跳出当前的多重嵌套循环？
+在最外层循环加一个标记如A,然后用break A;可以跳出多重循环。
+
+# 构造器(constructor)是否可以被重写(override)?
+构造器不能被继承，因此不能被重写，但可以被重载。
+
+# 两个对象值相同(x.equals(y)==true),但却可有不同的hash code,这句话对不对
+不对，如果两个对象x和y满足x.equals(y)==true，它们的哈希码应当相同。Java对于equals方法和hashCode方法是这样规定的：
+* 1.如果两个对象相同(equals方法返回true),那么它们的hashCode值一定要相同；
+* 2.如果两个对象的hashCode相同，它们并不一定相同。
+首先equals方法必须满足自反性(x.equals(x)必须返回true)、对称性(x.equals(y)返回true时，y.equals(x)也必须返回true)、传递性(x.equals(y)和y.equals(z)返回true时，x.equals(z)也必须返回true)和一致性(当x和y引用的对象信息没有被修改时，多次调用x.equals(y)应该得到同样的返回值)，而且对于任何非null值的引用x，x.equals(null)必须返回false.实现高质量的equals方法的诀窍包括：
+  * 使用==操作符检查"参数是否为这个对象的引用"
+  * 使用instanceOf操作符检查"参数是否为正确的类型"
+  * 对于类中的关键属性，检查参数传入对象的属性是否与之匹配
+  * 编写完equals方法后，问自己是否满足对称性、传递性、一致性
+  * 重写equals时总是要重写hashCode;
+  * 不要将equals方法参数中的Object对象替换为其他类型，在重写时不要忘记@Override注解
+
+# 是否可以继承String类
+不可以。因为String类是final类
+
+# 当一个对象被当作参数传递到一个方法后，此方法可改变这个对象的属性，并可返回变化后的结果，那么这里到底是值传递还是引用传递？
+是值传递。java编程语言只有值传递参数。当一个对象实例作为一个参数被传递到方法时，参数的值就是对该对象的引用。对象的属性可以在被调用过程中改变，但对象的引用是永远不会改变的。
 
 
 
