@@ -380,6 +380,103 @@ JVM中类的装载是由类加载器(ClassLoader)和它的子类来实现的，J
 * 由于java的跨平台性，经过编译的java源程序并不是一个可执行程序，而是一个或多个类文件。当java程序需要使用某个类时，JVM会确保这个类已经被加载、连接(验证、准备和解析)和初始化。类的加载是指把类的.class文件中的数据读入到内存中，通常是创建一个字节数组读入.class文件，然后产生与所加载类对应的Class对象。加载完后，Class对象还不完整，所以此时的类还不可用。当类被加载后就进入连接阶段，这一阶段包括验证、准备(为静态变量分配内存并设置默认的初始值)和解析(将符号引用替换为直接引用)三个步骤。最后JVM对类进行初始化，包括：1.如果类存在直接的父类并且这个类还没有被初始化，那么就先初始化父类；2.如果类中存在初始化语句，就依次执行这些初始化语句。
 * 类的加载是由类加载器完成的，类加载器包括：根加载器(BootStrap)、扩展加载器(Extension)、系统加载器(System)和用户定义类加载器(java.lang.ClassLoader的子类)。从jdk1.2开始，类加载过程采取了父亲委托机制(PDM)。PDM更好保证了java平台的安全性，在该机制中，JVM自带的BootStrap是根加载器，其他加载器都有且仅有一个父类加载器。类的加载首先请求父类加载器加载，父类加载器无能为力时，才由其子类加载器自行加载。
 
+# char型变量中能不能存储一个中文汉字？为什么
+char类型可以存储一个中文汉字，因为java中使用的编码是Unicode(不选择任何特定编码，直接使用字符在字符集中的编号，这是统一的唯一方法)，一个char类型占2个字节(16bit),所以放一个中文是没问题的。使用Unicode意味着字符在jvm内部和外部有不同的表现形式，在jvm内部都是unicode,当这个字符被从jvm内部转移到外部时，需要进行编码转换。所以java中有字节流和字符流，以及在字符流和字节流之间进行转换的转换流，如：InputStreamReader和OutputStreamReader，这两个类时字节流和字符流之间的适配器类，承担了编码转换的任务；
+
+# 抽象类和接口有什么异同？
+* 1.抽象类和接口都不能实例化，但可以定义抽象类和接口类型的引用。一个类如果继承了某个抽象类或实现了某个接口都需要对其中的抽象方法全部进行实现，否则该类任然需要被声明为抽象类。
+* 2.接口比抽象类更加抽象，因为抽象类中可以定义构造器，可以有抽象方法和具体方法，而接口中不能定义构造器而且其中的方法全部都是抽象方法。
+* 3.抽象类中的成员可以是private、默认、protected、public的，而接口中的成员全都是public的。
+* 4.抽象类中可以定义成员变量，而接口中定义的成员变量实际上都是常量。有抽象方法的类必须被声明为抽象类，而抽象类未必要有抽象方法。
+
+# 静态嵌套类和内部类的不同
+静态嵌套类是被声明为静态的内部类，它可以不依赖于外部类实例被实例化。而通常内部类需要在外部类实例化后才能实例化。
+
+# java中会存在内存泄漏么
+理论上java因为有垃圾回收机制不会存在内存泄漏问题。然而实际开发中，可能会存在无用但可达的对象，这些对象不能被GC回收也会发生内存泄漏。
+```java
+  public class MyStack<T>{
+    private T[] elements;
+    private int size=0;
+    private static final int INIT_CAPACITY=16;
+    
+    public MyStack(){
+      elements=(T[])new Object[INIT_CAPACITY];
+    }
+    public void push(T elem){
+      ensureCapacity();
+      elements[size++]=elem;
+    }
+    public T pop(){
+      if(size==0){
+        throw new EmptyStackException();
+      }
+      return elements[--size];
+    }
+    private void ensureCapacity(){
+      if(elements.length==size){
+        elements=Arrays.copyOf(elements,2*size+1);
+      }
+    }
+  }
+```
+上面实现了一个栈(先进后出)结构，其中pop方法存在内存泄漏的问题，当我们用pop方法弹出栈中的对象时，该对象不会被当作垃圾回收，即使使用栈的程序不再引用这些对象，因为栈内部维护着对这些对象的过期引用。
+
+# 抽象的方法是否可同时是静态的，是否可同时是本地方法，是否可同时被synchronized修饰
+都不能。抽象方法需要子类重写，而静态的方法是无法被重写的，因此二者是矛盾的。本地方法是由本地代码(如：c代码)实现的方法，而抽象方法是没有实现的，也是矛盾。synchronized和方法的实现细节有关，抽象方法不涉及实现细节，因此也相互矛盾。
+
+# 静态变量和实例变量的区别
+静态变量时被static修饰的变量，也称为类变量，它属于类，不属于类的任何一个对象。实例变量必须依存于某个实例，需要先创建对象然后通过对象才能访问到它。
+
+# 是否可以从一个静态方法内部发出对非静态方法的调用
+不可以，静态方法只能访问静态成员，因为非静态方法的调用先创建对象，因此在调用静态方法时可能对象并没有被初始化。
+
+# 如何实现对象clone
+* 1.实现Cloneable接口并重写Object类中的clone()方法；
+* 2.实现Serializable接口，通过对象的序列化和反序列化实现clone,可以实现真正的深度克隆
+```java
+  public static <T> T clone(T obj) throws Exception{
+    ByteArrayOutputStream baos=new ByteArrayOutputStream();
+    OjectOutputStream oos=new ObjectOutputStream(baos);
+    oos.writeObject(obj);
+    
+    ByteArrayInputStream bais=new ByteArrayInputStream(baos.toByteArray());
+    ObjectInputStream ois=new ObjectInputStream(bais);
+    return (T)ois.readObject();
+  }
+```
+注意：基于序列化和反序列化实现的克隆不仅仅是深度克隆，更重要的是通过泛型限定，可以检查出要克隆的对象是否支持序列化，这项检查是编译器完成的，不是在运行时抛出异常。
+
+# GC是什么？为什么要有GC
+GC是垃圾收集的意思，内存处理是编程人员容易出现问题的地方，忘记或错误的内存回收会导致程序或系统的不稳定甚至崩溃，java提供的GC功能可以自动监测对象是否超过作用域从而达到自动回收内存的目的。垃圾回收可以有效的防止内存泄漏，有效的使用可以使用的内存。垃圾回收器通常是作为一个单独的低优先级的线程运行，不可预知的情况下对内存堆中已经死亡的或者长时间没有使用的对象进行清除和回收。垃圾回收机制有很多种，包括：分代复制垃圾回收、标记垃圾回收、增量垃圾回收。java平台对堆内存回收和再利用的基本算法被称为标记和清除，但java对其进行了改进，采用"分代式垃圾收集"。这种方法会跟java对象的生命周期将堆内存划分为不同的区域：
+* 伊甸园(Eden):对象最初诞生的区域
+* 幸存者乐园(Survivor):从伊甸园幸存下来的对象会被挪到这里
+* 终身颐养园(Tenured):这是足够老的幸存对象的归宿。年轻代收集(Minor-GC)过程不会触及这个地方。当年轻代收集不能把对象放进终身颐养园时，就会触发一次完全收集(Major-GC)。
+
+与垃圾回收相关的JVM参数：
+* -Xms/-Xmx :堆的初始大小/堆的最大大小
+* -Xmn:堆中年轻代的大小
+* -XX:-DisableExplicitGC：让System.gc()不产生任何作用
+* -XX:+PrintGCDetail: 打印GC的细节
+* -XX:+PrintGCDateStamps: 打印GC操作的时间戳
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
