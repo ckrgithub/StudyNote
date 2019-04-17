@@ -509,7 +509,69 @@ GC是垃圾收集的意思，内存处理是编程人员容易出现问题的地
 
 # 数据类型之间的转换
 如何将字符串转换为基本数据类型？如何将基本数据类型转换为字符串？  
-调用基本数据类型对应的包装类中的方法parseXXX(String)或valueOf(String)
+* 调用基本数据类型对应的包装类中的方法parseXXX(String)或valueOf(String)即可返回相应基本类型；
+* 将基本数据类型与空字符串("")连接(+)或调用String类中的valueOf()方法返回相应字符串
+
+# 如何将字符串反转及替换
+```java
+  public static String reverse(String originStr){
+    if(originStr==null||originStr.length()<=1){
+      return originStr;
+    }
+    return reverse(originStr.subString(1))+originStr.chatAt(0);
+  }
+```
+# 怎样将GB2312编码的字符串转换为ISO-8859-1编码的字符串？
+```java
+  String s1="你好";
+  String s2=new String(s1.getBytes("GB2312"),"ISO-8859-1");
+```
+# 日期和时间
+1.如何取得年月日、小时分钟秒？2.如何取得从1970年1月1日0时0分0秒到现在的毫秒数？如何取得某月的最后一天？如何格式化日期
+* 创建Calendar实例，调用其get()方法传入不同的参数即可获得参数所对应的值
+* Calender.getInstance().getTimeInMillis()或System.currentTimeMillis();
+* Calendar.getInstance().getActualMaximun(Calendar.DAY_OF_MONTH);
+* 利用SimpleDateFormat类中的format(Date)方法可将日期格式化。
+
+# 打印昨天的当前时刻
+```java
+  public static void main(String[] args){
+    Calendar calendar=Calendar.getInstance();
+    calendar.add(Calendar.DATE,-1);
+    System.out.println(calendar.getTime());
+  }
+```
+# try{}里有一个return语句，那么紧跟在这个try后的finally{}里的code会不会被执行，什么时候被执行，在return前还是后？
+会执行，在方法返回调用者前执行。
+
+# Java语言如何进行异常处理，关键字：throws,throw,try,catch,finally分别如何使用？
+Java通过面向对象的方法进行异常处理，把各种不同的异常进行分类，并提供良好的接口。在Java中，每个异常都是一个对象，它是Throwable类或其子类的实例。当一个方法出现异常后便抛出一个异常对象，该对象中包含有异常信息，调用这个对象的方法可以捕获到这个异常并进行处理。一般情况用try来执行一段程序，如果出现异常，系统会抛出(throw)一个异常，这时候你可以通过它的类型来捕捉(catch)它，或最后(finally)有缺省处理器来处理；throws用来表明一个成员函数可能抛出的各种异常
+
+# 列出一些常见的运行时异常
+ArithmeticException(算术异常)、ClassCastException(类转换异常)、IllegalArgumentException(非法参数异常)、IndexOutOfBoundsException(下标越界异常)、NullPointerException(空指针异常)、SecurityException(安全异常)
+
+# final,finally,finalize区别
+* final修饰符：如果一个类被声明为final，意味着他不能再派生出新的子类，即不能被继承；将变量声明为final，可以保证它们在使用中不被改变，且必须在声明时给定初值；被声明为final的方法只用使用，不能在子类被重写。
+* finally:通常放在try...catch的后面构造总是执行代码块，意味着程序无论正常执行还是发生异常，这里的代码只要JVM不关闭都能执行，可以将释放外部资源的代码写在finally块中。
+* finalize:Object类中定义的方法,java中允许使用finalize()方法在垃圾收集器将对象从内存中清除出去之前做必要的清理工作。
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
