@@ -4,6 +4,7 @@
 
 [Apk反编译](https://blog.csdn.net/coder_pig/article/details/51379463)
 
+[Android闹钟填坑](https://www.jianshu.com/p/1f919c6eeff6)
 
 
 
