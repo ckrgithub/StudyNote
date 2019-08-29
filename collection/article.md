@@ -8,6 +8,7 @@
 
 [英语提升技巧](https://byoungd.gitbook.io/english-level-up-tips/part-i/3-listening)
 
+[java设计模式](https://www.runoob.com/design-pattern/design-pattern-intro.html)
 
 
 
