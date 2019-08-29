@@ -10,7 +10,9 @@
 
 [java设计模式](https://www.runoob.com/design-pattern/design-pattern-intro.html)
 
+[android官网](https://developer.android.google.cn/)
 
+[kotlin官网](https://www.kotlincn.net/docs/reference/basic-syntax.html)
 
 
 
