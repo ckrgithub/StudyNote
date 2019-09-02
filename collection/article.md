@@ -26,6 +26,7 @@
 
 [android性能优化](https://juejin.im/post/5d084ddae51d455d877e0d2f)
 
+[Sqlite修改表结构](https://www.wuhaojie.top/2019/03/14/SQLite/)
 
 
 
