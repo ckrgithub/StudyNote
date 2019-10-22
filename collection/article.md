@@ -32,7 +32,7 @@
 
 [GreenDao数据库升级](https://blog.csdn.net/qq_29924041/article/details/86584702)
 
-
+[Android10 适配](https://my.oschina.net/huanghaibin/blog/3106432)
 
 
 
