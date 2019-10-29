@@ -34,7 +34,7 @@
 
 [Android10 适配](https://my.oschina.net/huanghaibin/blog/3106432)
 
-
+[Android周报](https://androidweekly.io/)
 
 
 
